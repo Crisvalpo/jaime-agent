@@ -14,7 +14,7 @@ Responde de manera concisa y directa, a menos que se te pida más detalle.
 `;
 
 export const runAgentLoop = async (userMessage: string): Promise<string> => {
-    // 1. Save user msg to DB
+    // 1. Save user msg to Firestore
     await insertMessage({ role: "user", content: userMessage });
 
     let iterations = 0;
@@ -24,51 +24,39 @@ export const runAgentLoop = async (userMessage: string): Promise<string> => {
     // Tools definition
     const tools = getToolDefinitions();
 
+    // In-memory message list for this turn only (avoids tool_calls/tool serialization issues)
+    const history = await getRecentMessages(10);
+    const messages: any[] = [
+        { role: "system", content: SYSTEM_PROMPT },
+        ...history
+    ];
+
     while (!isDone && iterations < MAX_ITERATIONS) {
         iterations++;
 
-        // 2. Fetch context (system prompt + recent history)
-        const history = await getRecentMessages(10); // get last 10 messages
-        const messages: any[] = [
-            { role: "system", content: SYSTEM_PROMPT },
-            ...history
-        ];
-
-        // 3. Call LLM
+        // Call LLM with current in-memory message list
         const responseMessage = await callLLM(messages, tools);
 
-        // 4. Save LLM interaction
-        if (responseMessage.content) {
-            await insertMessage({
-                role: "assistant",
-                content: responseMessage.content
-            });
-        }
-
-        if (responseMessage.tool_calls) {
-            await insertMessage({
-                role: "assistant",
-                content: null,
-                tool_calls: JSON.stringify(responseMessage.tool_calls)
-            });
-        }
-
-        // 5. Check if LLM wants to use a tool
+        // Check if LLM wants to use a tool
         if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
+            // Add assistant's tool call request to in-memory messages
+            messages.push({
+                role: "assistant",
+                content: responseMessage.content || null,
+                tool_calls: responseMessage.tool_calls
+            });
+
             for (const toolCall of responseMessage.tool_calls) {
                 if (toolCall.type === "function") {
                     const functionName = toolCall.function.name;
                     const functionArgs = toolCall.function.arguments;
 
                     console.log(`[Agent] Calling tool: ${functionName} with ${functionArgs}`);
-
-                    // Execute tool
                     const toolResult = await executeToolCall(functionName, functionArgs);
-
                     console.log(`[Agent] Tool result for ${functionName}:`, toolResult);
 
-                    // Save tool result
-                    await insertMessage({
+                    // Add tool result to in-memory messages for next LLM call
+                    messages.push({
                         role: "tool",
                         tool_call_id: toolCall.id,
                         name: functionName,
@@ -76,11 +64,14 @@ export const runAgentLoop = async (userMessage: string): Promise<string> => {
                     });
                 }
             }
-            // Loop again so LLM can read the tool result and answer the user
+            // Loop again so LLM can synthesize a final answer
         } else {
-            // 6. Final answer reached
+            // Final answer reached
             finalReply = responseMessage.content || "No tengo una respuesta (contenido vacío).";
             isDone = true;
+
+            // Only save the final human-readable assistant reply to Firestore
+            await insertMessage({ role: "assistant", content: finalReply });
         }
     }
 
