@@ -1,4 +1,5 @@
-import { db } from "./firebase.js";
+import { getDb } from "./firebase.js";
+import { FieldValue } from "firebase-admin/firestore";
 import type { ChatCompletionMessageParam } from "openai/resources/index.js";
 
 interface DbMessage {
@@ -10,25 +11,22 @@ interface DbMessage {
     timestamp?: FirebaseFirestore.FieldValue;
 }
 
-// Collections references
-const messagesCol = db.collection("messages");
-const memoriesCol = db.collection("memories");
-
 /**
  * Inserta un nuevo mensaje en el historial.
  */
 export const insertMessage = async (msg: Omit<DbMessage, "timestamp">) => {
     try {
+        const db = getDb();
         const payload: any = {
             role: msg.role,
             content: msg.content || null,
-            timestamp: FirebaseFirestore.FieldValue.serverTimestamp(),
+            timestamp: FieldValue.serverTimestamp(),
         };
         if (msg.tool_calls) payload.tool_calls = msg.tool_calls;
         if (msg.tool_call_id) payload.tool_call_id = msg.tool_call_id;
         if (msg.name) payload.name = msg.name;
 
-        await messagesCol.add(payload);
+        await db.collection("messages").add(payload);
     } catch (error) {
         console.error("❌ Error guardando mensaje en Firestore:", error);
     }
@@ -39,7 +37,8 @@ export const insertMessage = async (msg: Omit<DbMessage, "timestamp">) => {
  */
 export const getRecentMessages = async (limit = 20): Promise<ChatCompletionMessageParam[]> => {
     try {
-        const snapshot = await messagesCol.orderBy("timestamp", "desc").limit(limit).get();
+        const db = getDb();
+        const snapshot = await db.collection("messages").orderBy("timestamp", "desc").limit(limit).get();
 
         // Reverse them to be in chronological order
         const docs = snapshot.docs.reverse();
@@ -65,8 +64,8 @@ export const getRecentMessages = async (limit = 20): Promise<ChatCompletionMessa
  * Limpia el historial entero de Firestore
  */
 export const clearMessages = async () => {
-    // Para simplificar, obtenemos los documentos y los borramos uno por uno (o en batch).
-    const snapshot = await messagesCol.get();
+    const db = getDb();
+    const snapshot = await db.collection("messages").get();
     const batch = db.batch();
     snapshot.docs.forEach((doc) => {
         batch.delete(doc.ref);
@@ -78,11 +77,11 @@ export const clearMessages = async () => {
 
 export const setMemory = async (key: string, value: string) => {
     try {
-        // Usamos el `key` como el ID del documento para que funcione como INSERT/UPDATE fácil
-        await memoriesCol.doc(key).set({
+        const db = getDb();
+        await db.collection("memories").doc(key).set({
             key,
             value,
-            timestamp: FirebaseFirestore.FieldValue.serverTimestamp()
+            timestamp: FieldValue.serverTimestamp()
         }, { merge: true });
     } catch (error) {
         console.error("❌ Error guardando memoria en Firestore:", error);
@@ -91,7 +90,8 @@ export const setMemory = async (key: string, value: string) => {
 
 export const getMemory = async (key: string): Promise<string | null> => {
     try {
-        const doc = await memoriesCol.doc(key).get();
+        const db = getDb();
+        const doc = await db.collection("memories").doc(key).get();
         if (doc.exists) {
             return doc.data()?.value as string;
         }
@@ -104,7 +104,8 @@ export const getMemory = async (key: string): Promise<string | null> => {
 
 export const getAllMemories = async (): Promise<{ key: string; value: string }[]> => {
     try {
-        const snapshot = await memoriesCol.orderBy("timestamp", "desc").get();
+        const db = getDb();
+        const snapshot = await db.collection("memories").orderBy("timestamp", "desc").get();
         return snapshot.docs.map(doc => {
             const data = doc.data();
             return { key: data.key, value: data.value };
