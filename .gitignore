@@ -1,9 +1,6 @@
 # Módulos
 node_modules/
 
-# Builds
-dist/
-
 # Bases de datos y archivos binarios
 *.db
 *.db-shm
