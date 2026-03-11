@@ -1,0 +1,17 @@
+# Módulos
+node_modules/
+
+# Builds
+dist/
+
+# Bases de datos y archivos binarios
+*.db
+*.db-shm
+*.db-wal
+
+# Variables y Credenciales (CRÍTICO)
+.env
+service-account.json
+
+# Archivos de SO
+.DS_Store
