@@ -2,24 +2,20 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.executeToolCall = exports.getToolDefinitions = void 0;
 const store_js_1 = require("../db/store.js");
-// Custom tools
-const tools = {
+const lukeapp_js_1 = require("./lukeapp.js");
+const coreTools = {
     get_current_time: {
         definition: {
             type: "function",
             function: {
                 name: "get_current_time",
-                description: "Returns the current local date and time. Use this when the user asks for the time or date.",
-                parameters: {
-                    type: "object",
-                    properties: {},
-                    required: [],
-                },
+                description: "Returns the current date and time in Spanish. Use when the user asks for the time or date.",
+                parameters: { type: "object", properties: {}, required: [] },
             },
         },
         executor: () => {
             const now = new Date();
-            return `Current time is: ${now.toLocaleString("es-ES")} (Timezone offset: ${now.getTimezoneOffset()})`;
+            return `Fecha y hora actual: ${now.toLocaleString("es-ES")}`;
         },
     },
     save_memory: {
@@ -27,20 +23,20 @@ const tools = {
             type: "function",
             function: {
                 name: "save_memory",
-                description: "Saves a piece of information, preference, or context about the user into long-term memory. Use this when the user tells you something you should remember for future conversations.",
+                description: "Saves a key-value fact about the user into long-term memory for future conversations.",
                 parameters: {
                     type: "object",
                     properties: {
-                        key: { type: "string", description: "A unique, snake_case identifier for this memory. e.g. 'user_name', 'favorite_food'" },
-                        value: { type: "string", description: "The content to remember." }
+                        key: { type: "string", description: "Unique identifier in snake_case, e.g. 'user_name'" },
+                        value: { type: "string", description: "Content to remember." }
                     },
                     required: ["key", "value"],
                 },
             },
         },
-        executor: async ({ key, value }) => {
-            await (0, store_js_1.setMemory)(key, value);
-            return `Successfully saved memory '${key}'.`;
+        executor: async ({ key, value }, userId) => {
+            await (0, store_js_1.setMemory)(userId, key, value);
+            return `Memoria '${key}' guardada.`;
         },
     },
     get_memory: {
@@ -48,19 +44,19 @@ const tools = {
             type: "function",
             function: {
                 name: "get_memory",
-                description: "Retrieves a specific piece of information from long-term memory using its key. If you are unsure of the key, use list_memories first.",
+                description: "Retrieves a specific memory by key.",
                 parameters: {
                     type: "object",
                     properties: {
-                        key: { type: "string", description: "The key of the memory to block." }
+                        key: { type: "string" }
                     },
                     required: ["key"],
                 },
             },
         },
-        executor: async ({ key }) => {
-            const val = await (0, store_js_1.getMemory)(key);
-            return val ? `Memory '${key}': ${val}` : `No memory found for key '${key}'.`;
+        executor: async ({ key }, userId) => {
+            const val = await (0, store_js_1.getMemory)(userId, key);
+            return val ? `Memoria '${key}': ${val}` : `No hay memoria guardada para '${key}'.`;
         },
     },
     list_memories: {
@@ -68,35 +64,32 @@ const tools = {
             type: "function",
             function: {
                 name: "list_memories",
-                description: "Returns a list of all saved memory keys. Use this to find out what information you have stored about the user.",
-                parameters: {
-                    type: "object",
-                    properties: {},
-                    required: [],
-                },
+                description: "Lists all saved memory keys for the current user.",
+                parameters: { type: "object", properties: {}, required: [] },
             },
         },
-        executor: async () => {
-            const memories = await (0, store_js_1.getAllMemories)();
+        executor: async (_args, userId) => {
+            const memories = await (0, store_js_1.getAllMemories)(userId);
             if (!memories || memories.length === 0)
-                return "No memories saved yet.";
-            return `Saved memory columns:\n${memories.map((m) => `- ${m.key}: ${m.value}`).join("\n")}`;
+                return "Sin memorias guardadas todavía.";
+            return memories.map((m) => `- ${m.key}: ${m.value}`).join("\n");
         },
-    }
+    },
 };
-const getToolDefinitions = () => Object.values(tools).map(t => t.definition);
+// Merge core tools with LukeAPP data tools
+const allTools = { ...coreTools, ...lukeapp_js_1.lukeappTools };
+const getToolDefinitions = () => Object.values(allTools).map(t => t.definition);
 exports.getToolDefinitions = getToolDefinitions;
-const executeToolCall = async (name, argsRaw) => {
-    const tool = tools[name];
-    if (!tool) {
-        return `Error: Tool '${name}' not found.`;
-    }
+const executeToolCall = async (name, argsRaw, userId = "unknown") => {
+    const tool = allTools[name];
+    if (!tool)
+        return `Error: Herramienta '${name}' no encontrada.`;
     try {
         const args = JSON.parse(argsRaw);
-        return await tool.executor(args);
+        return await tool.executor(args, userId);
     }
     catch (error) {
-        return `Error executing tool '${name}': ${error.message}`;
+        return `Error ejecutando '${name}': ${error.message}`;
     }
 };
 exports.executeToolCall = executeToolCall;

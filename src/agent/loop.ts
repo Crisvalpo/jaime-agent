@@ -5,27 +5,27 @@ import { insertMessage, getRecentMessages } from "../db/store.js";
 const MAX_ITERATIONS = 5;
 
 const SYSTEM_PROMPT = `
-Eres jAIme, un asistente de IA personal, seguro y que funciona de forma local vía Telegram.
-Fuiste creado desde cero por mí (tu creador) para ser simple, seguro y completamente bajo mi control.
-Debes comunicarte SIEMPRE en español de forma natural.
-Tienes memoria a largo plazo (usa save_memory, get_memory y list_memories para gestionar tus conocimientos sobre el usuario).
-Tienes acceso a la hora actual con get_current_time.
-Responde de manera concisa y directa, a menos que se te pida más detalle.
+Eres jAIme, el asistente de LukeAPP conectado a datos reales de proyectos industriales.
+REGLAS ESTRICTAS:
+- Respuestas cortas y directas. Nada de párrafos largos.
+- SIEMPRE guía la conversación ofreciendo opciones numeradas. Ejemplo: "¿Qué quieres saber?\na) Proyectos activos\nb) Estado de spools\nc) Materiales disponibles"
+- Si el usuario no sabe qué pedir, SIEMPRE muestra las opciones por defecto.
+- Usa las herramientas para obtener datos reales de LukeAPP cuando se te consulte.
+- Habla siempre en español.
 `;
 
-export const runAgentLoop = async (userMessage: string): Promise<string> => {
-    // 1. Save user msg to Firestore
-    await insertMessage({ role: "user", content: userMessage });
+export const runAgentLoop = async (userId: string, userMessage: string): Promise<string> => {
+    // 1. Save user msg to Firestore (isolated by userId)
+    await insertMessage(userId, { role: "user", content: userMessage });
 
     let iterations = 0;
     let isDone = false;
     let finalReply = "Ocurrió un error inesperado al procesar tu solicitud.";
 
-    // Tools definition
     const tools = getToolDefinitions();
 
-    // In-memory message list for this turn only (avoids tool_calls/tool serialization issues)
-    const history = await getRecentMessages(10);
+    // Load history for this specific user
+    const history = await getRecentMessages(userId, 10);
     const messages: any[] = [
         { role: "system", content: SYSTEM_PROMPT },
         ...history
@@ -34,12 +34,9 @@ export const runAgentLoop = async (userMessage: string): Promise<string> => {
     while (!isDone && iterations < MAX_ITERATIONS) {
         iterations++;
 
-        // Call LLM with current in-memory message list
         const responseMessage = await callLLM(messages, tools);
 
-        // Check if LLM wants to use a tool
         if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
-            // Add assistant's tool call request to in-memory messages
             messages.push({
                 role: "assistant",
                 content: responseMessage.content || null,
@@ -51,11 +48,9 @@ export const runAgentLoop = async (userMessage: string): Promise<string> => {
                     const functionName = toolCall.function.name;
                     const functionArgs = toolCall.function.arguments;
 
-                    console.log(`[Agent] Calling tool: ${functionName} with ${functionArgs}`);
-                    const toolResult = await executeToolCall(functionName, functionArgs);
-                    console.log(`[Agent] Tool result for ${functionName}:`, toolResult);
+                    console.log(`[Agent:${userId}] Calling tool: ${functionName}`);
+                    const toolResult = await executeToolCall(functionName, functionArgs, userId);
 
-                    // Add tool result to in-memory messages for next LLM call
                     messages.push({
                         role: "tool",
                         tool_call_id: toolCall.id,
@@ -64,19 +59,15 @@ export const runAgentLoop = async (userMessage: string): Promise<string> => {
                     });
                 }
             }
-            // Loop again so LLM can synthesize a final answer
         } else {
-            // Final answer reached
-            finalReply = responseMessage.content || "No tengo una respuesta (contenido vacío).";
+            finalReply = responseMessage.content || "No tengo una respuesta.";
             isDone = true;
-
-            // Only save the final human-readable assistant reply to Firestore
-            await insertMessage({ role: "assistant", content: finalReply });
+            await insertMessage(userId, { role: "assistant", content: finalReply });
         }
     }
 
     if (iterations >= MAX_ITERATIONS) {
-        finalReply = "He alcanzado mi límite de iteraciones pensadas. ¿En qué más puedo ayudarte?";
+        finalReply = "He alcanzado mi límite de iteraciones. ¿En qué más puedo ayudarte?";
     }
 
     return finalReply;

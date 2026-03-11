@@ -11,7 +11,9 @@ const envSchema = z.object({
     GROQ_API_KEY: z.string().min(1, "Groq API key is required"),
     OPENROUTER_API_KEY: z.string().min(1, "OpenRouter API key is required"),
     OPENROUTER_MODEL: z.string().default("openrouter/free"),
-    DB_PATH: z.string().default("./memory.db"),
+    // LukeAPP Supabase Connection
+    SUPABASE_URL: z.string().url().min(1, "Supabase URL is required"),
+    SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, "Supabase Service Role Key is required"),
 });
 
 const parseEnv = () => {

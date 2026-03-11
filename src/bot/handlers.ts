@@ -8,16 +8,18 @@ export const handleMessage = async (ctx: Context) => {
     }
 
     const userText = ctx.message.text;
-    console.log(`[Telegram] User says: ${userText}`);
+    // Use Telegram user ID as the unique key for memory/conversation isolation
+    const userId = ctx.from?.id.toString() ?? "unknown";
 
-    // Send typing indicator
+    console.log(`[Telegram] User ${userId} says: ${userText}`);
+
     await ctx.replyWithChatAction("typing");
 
     try {
-        const finalReply = await runAgentLoop(userText);
+        const finalReply = await runAgentLoop(userId, userText);
         await ctx.reply(finalReply, { parse_mode: "Markdown" });
     } catch (error: any) {
-        console.error("❌ Error in agent loop execution:", error);
+        console.error(`❌ Error in agent loop for user ${userId}:`, error);
         await ctx.reply(`Ocurrió un error en mi procesamiento interno: ${error.message}`);
     }
 };
