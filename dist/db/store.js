@@ -10,11 +10,16 @@ const firestore_1 = require("firebase-admin/firestore");
 const insertMessage = async (userId, msg) => {
     try {
         const db = (0, firebase_js_1.getDb)();
-        await db.collection("messages").doc(userId).collection("history").add({
+        // Limpiar el objeto para Firestore (evitar undefined o funciones)
+        const cleanMsg = JSON.parse(JSON.stringify({
             role: msg.role,
             content: msg.content || null,
+            name: msg.name || null,
+            tool_call_id: msg.tool_call_id || null,
+            tool_calls: msg.tool_calls || null,
             timestamp: firestore_1.FieldValue.serverTimestamp(),
-        });
+        }));
+        await db.collection("messages").doc(userId).collection("history").add(cleanMsg);
     }
     catch (error) {
         console.error("❌ Error guardando mensaje en Firestore:", error);
@@ -33,7 +38,14 @@ const getRecentMessages = async (userId, limit = 20) => {
         const docs = snapshot.docs.reverse();
         return docs.map(doc => {
             const row = doc.data();
-            return { role: row.role, content: row.content };
+            const msg = { role: row.role, content: row.content };
+            if (row.name)
+                msg.name = row.name;
+            if (row.tool_call_id)
+                msg.tool_call_id = row.tool_call_id;
+            if (row.tool_calls)
+                msg.tool_calls = row.tool_calls;
+            return msg;
         });
     }
     catch (error) {

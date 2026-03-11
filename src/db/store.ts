@@ -7,17 +7,20 @@ import type { ChatCompletionMessageParam } from "openai/resources/index.js";
 /**
  * Inserta un nuevo mensaje en el historial del usuario.
  */
-export const insertMessage = async (userId: string, msg: {
-    role: "system" | "user" | "assistant" | "tool";
-    content: string | null;
-}) => {
+export const insertMessage = async (userId: string, msg: any) => {
     try {
         const db = getDb();
-        await db.collection("messages").doc(userId).collection("history").add({
+        // Limpiar el objeto para Firestore (evitar undefined o funciones)
+        const cleanMsg = JSON.parse(JSON.stringify({
             role: msg.role,
             content: msg.content || null,
+            name: msg.name || null,
+            tool_call_id: msg.tool_call_id || null,
+            tool_calls: msg.tool_calls || null,
             timestamp: FieldValue.serverTimestamp(),
-        });
+        }));
+
+        await db.collection("messages").doc(userId).collection("history").add(cleanMsg);
     } catch (error) {
         console.error("❌ Error guardando mensaje en Firestore:", error);
     }
@@ -37,7 +40,11 @@ export const getRecentMessages = async (userId: string, limit = 20): Promise<Cha
 
         return docs.map(doc => {
             const row = doc.data();
-            return { role: row.role, content: row.content } as ChatCompletionMessageParam;
+            const msg: any = { role: row.role, content: row.content };
+            if (row.name) msg.name = row.name;
+            if (row.tool_call_id) msg.tool_call_id = row.tool_call_id;
+            if (row.tool_calls) msg.tool_calls = row.tool_calls;
+            return msg as ChatCompletionMessageParam;
         });
     } catch (error) {
         console.error("❌ Error leyendo mensajes de Firestore:", error);

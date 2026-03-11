@@ -5,30 +5,22 @@ import { insertMessage, getRecentMessages } from "../db/store.js";
 const MAX_ITERATIONS = 5;
 
 const SYSTEM_PROMPT = `
-Eres jAIme, asistente de LukeAPP con acceso a datos reales de proyectos industriales.
-Idioma: siempre español. Respuestas breves y directas.
+Eres jAIme, el asistente inteligente de LukeAPP. Ayudas a Cristian y su equipo con datos de proyectos industriales.
 
-FLUJO OBLIGATORIO:
-1. Si el usuario saluda o no sabe qué pedir → muestra este menú exacto:
-   "¿Qué quieres consultar?
-   a) Proyectos activos
-   b) Estado de spools
-   c) Materiales
-   d) Miembros del equipo"
+Personalidad:
+- Profesional, amable y directo. No uses textos largos ni rellenos innecesarios.
+- Habla en español de forma natural.
 
-2. Si el usuario elige una opción o hace una pregunta relacionada → llama la herramienta SIN hacer más preguntas:
-   - a o "proyectos" → query_projects
-   - b o "spools" → query_spools
-   - c o "materiales" → query_materials
-   - d o "miembros" → query_members
+Capacidades:
+- Tienes acceso a herramientas para consultar proyectos, spools, materiales y miembros. Úsalas siempre que el usuario pregunte algo relacionado.
+- Si el usuario te saluda o parece perdido, ofrécele ayuda mencionando qué puedes consultar (proyectos, spools, etc.) de forma amigable, sin forzar un menú rígido.
 
-3. Cuando recibas el resultado de la herramienta → PRIMERO escribe los resultados completos al usuario. LUEGO, en la misma respuesta, pregunta: "¿Qué más quieres consultar?" con el menú breve.
-
-CRÍTICO: Nunca respondas solo con el menú si ya tienes datos de una herramienta. Los datos van SIEMPRE antes del menú.
+Regla de Oro:
+- Cuando uses una herramienta, presenta SIEMPRE los datos encontrados de forma clara antes de continuar la conversación.
 `;
 
 export const runAgentLoop = async (userId: string, userMessage: string): Promise<string> => {
-    // 1. Save user msg to Firestore (isolated by userId)
+    // 1. Save user msg to Firestore
     await insertMessage(userId, { role: "user", content: userMessage });
 
     let iterations = 0;
@@ -50,11 +42,13 @@ export const runAgentLoop = async (userId: string, userMessage: string): Promise
         const responseMessage = await callLLM(messages, tools);
 
         if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
-            messages.push({
+            const assistantMsg = {
                 role: "assistant",
                 content: responseMessage.content || null,
                 tool_calls: responseMessage.tool_calls
-            });
+            };
+            messages.push(assistantMsg);
+            await insertMessage(userId, assistantMsg);
 
             for (const toolCall of responseMessage.tool_calls) {
                 if (toolCall.type === "function") {
@@ -63,13 +57,16 @@ export const runAgentLoop = async (userId: string, userMessage: string): Promise
 
                     console.log(`[Agent:${userId}] Calling tool: ${functionName}`);
                     const toolResult = await executeToolCall(functionName, functionArgs, userId);
+                    console.log(`[Agent:${userId}] Tool Result:`, toolResult);
 
-                    messages.push({
+                    const toolMsg = {
                         role: "tool",
                         tool_call_id: toolCall.id,
                         name: functionName,
                         content: toolResult
-                    });
+                    };
+                    messages.push(toolMsg);
+                    await insertMessage(userId, toolMsg);
                 }
             }
         } else {

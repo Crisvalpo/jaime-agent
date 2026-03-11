@@ -30,6 +30,12 @@ const callLLM = async (messages, tools, useFallback = false) => {
             tools,
             tool_choice: tools && tools.length > 0 ? "auto" : "none",
         });
+        if (response?.error) {
+            throw new Error(`API Error: ${response.error.message || JSON.stringify(response.error)}`);
+        }
+        if (!response?.choices?.[0]?.message) {
+            throw new Error(`Unexpected LLM response format: ${JSON.stringify(response)}`);
+        }
         return response.choices[0].message;
     }
     catch (error) {

@@ -26,12 +26,19 @@ export const callLLM = async (
     const model = useFallback ? config.OPENROUTER_MODEL : "llama-3.3-70b-versatile"; // Default Groq model
 
     try {
-        const response = await client.chat.completions.create({
+        const response: any = await client.chat.completions.create({
             model,
             messages,
             tools,
             tool_choice: tools && tools.length > 0 ? "auto" : "none",
         });
+
+        if (response?.error) {
+            throw new Error(`API Error: ${response.error.message || JSON.stringify(response.error)}`);
+        }
+        if (!response?.choices?.[0]?.message) {
+            throw new Error(`Unexpected LLM response format: ${JSON.stringify(response)}`);
+        }
 
         return response.choices[0].message;
     } catch (error) {

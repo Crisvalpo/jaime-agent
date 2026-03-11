@@ -2,8 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.lukeappTools = void 0;
 const config_js_1 = require("../config.js");
-// Lightweight Supabase REST client (no SDK needed for simple queries)
-// Uses internal URL on the server (bypasses Cloudflare), public URL locally
+// Lightweight Supabase REST client
 const supabaseUrl = config_js_1.config.SUPABASE_INTERNAL_URL ?? config_js_1.config.SUPABASE_URL;
 const supabaseHeaders = {
     "Content-Type": "application/json",
@@ -29,19 +28,14 @@ exports.lukeappTools = {
             type: "function",
             function: {
                 name: "query_projects",
-                description: "Lists active projects registered in LukeAPP, including their company and status. Use this when asked about what projects exist.",
-                parameters: {
-                    type: "object",
-                    properties: {},
-                    required: [],
-                },
+                description: "Lists active projects registered in LukeAPP.",
+                parameters: { type: "object", properties: {}, required: [] },
             },
         },
         executor: async () => {
             const rows = await supabaseQuery("projects", {
                 "select": "name,code,status,companies(name)",
-                "limit": "20",
-                "order": "created_at.desc",
+                "limit": "10",
             });
             if (!rows || rows.length === 0)
                 return "No hay proyectos registrados.";
@@ -53,29 +47,27 @@ exports.lukeappTools = {
             type: "function",
             function: {
                 name: "query_spools",
-                description: "Searches for spools (pipe segments) in LukeAPP by status or line number. Use when asked about fabrication progress, spool status, or line numbers.",
+                description: "Searches for spools in projects. Use when asked about spool status.",
                 parameters: {
                     type: "object",
                     properties: {
-                        status: { type: "string", description: "Filter by status (e.g. PENDING, IN_PROGRESS, COMPLETED). Leave empty for all." },
-                        limit: { type: "number", description: "Max results to return (default 10)." },
+                        status: { type: "string", description: "Filter by status (PENDING, IN_FABRICATION, etc.)" },
                     },
                     required: [],
                 },
             },
         },
-        executor: async ({ status, limit = 10 }) => {
+        executor: async ({ status }) => {
             const params = {
-                "select": "spool_number,status,line_number,isometric_number,projects(name)",
-                "limit": String(limit ?? 10),
-                "order": "updated_at.desc",
+                "select": "spool_number,status,line_number,iso_number,projects(name)",
+                "limit": "10",
             };
             if (status)
                 params["status"] = `eq.${status.toUpperCase()}`;
             const rows = await supabaseQuery("spools", params);
             if (!rows || rows.length === 0)
-                return "No se encontraron spools con ese filtro.";
-            return rows.map((s) => `🔩 Spool **${s.spool_number}** | Línea: ${s.line_number ?? "N/D"} | Iso: ${s.isometric_number ?? "N/D"} | Estado: ${s.status} | Proyecto: ${s.projects?.name ?? "N/D"}`).join("\n");
+                return "No se encontraron spools.";
+            return rows.map((s) => `🔩 Spool **${s.spool_number}** | Línea: ${s.line_number ?? "N/D"} | Iso: ${s.iso_number ?? "N/D"} | Estado: ${s.status}`).join("\n");
         },
     },
     query_materials: {
@@ -83,27 +75,26 @@ exports.lukeappTools = {
             type: "function",
             function: {
                 name: "query_materials",
-                description: "Searches the material catalog in LukeAPP by item code or description. Use when asked about available materials, specifications, or stock.",
+                description: "Searches in the material catalog.",
                 parameters: {
                     type: "object",
                     properties: {
-                        search: { type: "string", description: "Text to search in the material code or description." },
-                        limit: { type: "number", description: "Max results to return (default 10)." },
+                        search: { type: "string", description: "Item code or description" },
                     },
                     required: ["search"],
                 },
             },
         },
-        executor: async ({ search, limit = 10 }) => {
+        executor: async ({ search }) => {
             const params = {
-                "select": "ident_code,description,unit,spec_code,projects(name)",
-                "limit": String(limit ?? 10),
-                "or": `(ident_code.ilike.*${search}*,description.ilike.*${search}*)`,
+                "select": "ident_code,short_desc,spec_code",
+                "limit": "10",
+                "or": `(ident_code.ilike.*${search}*,short_desc.ilike.*${search}*)`,
             };
             const rows = await supabaseQuery("material_catalog", params);
             if (!rows || rows.length === 0)
-                return `No se encontraron materiales que coincidan con "${search}".`;
-            return rows.map((m) => `📦 **${m.ident_code}** | ${m.description} | Unidad: ${m.unit} | Spec: ${m.spec_code ?? "N/D"} | Proyecto: ${m.projects?.name ?? "N/D"}`).join("\n");
+                return `Sin resultados para "${search}".`;
+            return rows.map((m) => `📦 **${m.ident_code}** | ${m.short_desc} | Spec: ${m.spec_code ?? "N/D"}`).join("\n");
         },
     },
     query_members: {
@@ -111,31 +102,48 @@ exports.lukeappTools = {
             type: "function",
             function: {
                 name: "query_members",
-                description: "Lists team members registered in LukeAPP projects. Use when asked about who works on a project or what roles people have.",
-                parameters: {
-                    type: "object",
-                    properties: {
-                        project_name: { type: "string", description: "Filter by partial project name (optional)." },
-                    },
-                    required: [],
-                },
+                description: "Lists project members and their roles.",
+                parameters: { type: "object", properties: {}, required: [] },
             },
         },
-        executor: async ({ project_name }) => {
+        executor: async () => {
+            // Updated to match your schema: role_id and functional_role (via company_roles)
             const params = {
-                "select": "role,users(full_name,email),projects(name),company_roles(name)",
+                "select": "role_id,users(full_name,email),projects(name),company_roles(name)",
                 "limit": "20",
             };
             const rows = await supabaseQuery("members", params);
             if (!rows || rows.length === 0)
                 return "No se encontraron miembros.";
-            let filtered = rows;
-            if (project_name) {
-                filtered = rows.filter((m) => m.projects?.name?.toLowerCase().includes(project_name.toLowerCase()));
-            }
-            if (filtered.length === 0)
-                return `No se encontraron miembros en proyectos que coincidan con "${project_name}".`;
-            return filtered.map((m) => `👤 ${m.users?.full_name ?? m.users?.email ?? "N/D"} — Rol: ${m.company_roles?.name ?? m.role} | Proyecto: ${m.projects?.name ?? "Global"}`).join("\n");
+            return rows.map((m) => `👤 ${m.users?.full_name ?? m.users?.email ?? "N/D"} — Rol: ${m.company_roles?.name ?? m.role_id} | Proyecto: ${m.projects?.name ?? "Global"}`).join("\n");
+        },
+    },
+    query_isometrics: {
+        definition: {
+            type: "function",
+            function: {
+                name: "query_isometrics",
+                description: "Lists isometrics from projects.",
+                parameters: {
+                    type: "object",
+                    properties: {
+                        line: { type: "string", description: "Line number" }
+                    },
+                    required: []
+                },
+            },
+        },
+        executor: async ({ line }) => {
+            const params = {
+                "select": "iso_number,line_number,sheet,revision_status,projects(name)",
+                "limit": "10",
+            };
+            if (line)
+                params["line_number"] = `ilike.*${line}*`;
+            const rows = await supabaseQuery("isometrics", params);
+            if (!rows || rows.length === 0)
+                return "No se encontraron isométricos.";
+            return rows.map((i) => `📐 **${i.iso_number}** | Línea: ${i.line_number ?? "N/D"} | Lámina: ${i.sheet ?? "1"} | Estado: ${i.revision_status}`).join("\n");
         },
     },
 };
