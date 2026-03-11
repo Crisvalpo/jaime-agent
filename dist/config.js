@@ -14,7 +14,10 @@ const envSchema = zod_1.z.object({
     OPENROUTER_API_KEY: zod_1.z.string().min(1, "OpenRouter API key is required"),
     OPENROUTER_MODEL: zod_1.z.string().default("openrouter/free"),
     // LukeAPP Supabase Connection
+    // SUPABASE_INTERNAL_URL: used on the Ubuntu server to bypass Cloudflare tunnel (e.g. http://localhost:8000)
+    // If not set, falls back to SUPABASE_URL (public tunnel, used locally)
     SUPABASE_URL: zod_1.z.string().url().min(1, "Supabase URL is required"),
+    SUPABASE_INTERNAL_URL: zod_1.z.string().url().optional(),
     SUPABASE_SERVICE_ROLE_KEY: zod_1.z.string().min(1, "Supabase Service Role Key is required"),
 });
 const parseEnv = () => {

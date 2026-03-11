@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.lukeappTools = void 0;
 const config_js_1 = require("../config.js");
 // Lightweight Supabase REST client (no SDK needed for simple queries)
+// Uses internal URL on the server (bypasses Cloudflare), public URL locally
+const supabaseUrl = config_js_1.config.SUPABASE_INTERNAL_URL ?? config_js_1.config.SUPABASE_URL;
 const supabaseHeaders = {
     "Content-Type": "application/json",
     "apikey": config_js_1.config.SUPABASE_SERVICE_ROLE_KEY,
@@ -10,7 +12,7 @@ const supabaseHeaders = {
     "Prefer": "count=exact",
 };
 async function supabaseQuery(table, params = {}) {
-    const url = new URL(`${config_js_1.config.SUPABASE_URL}/rest/v1/${table}`);
+    const url = new URL(`${supabaseUrl}/rest/v1/${table}`);
     for (const [key, value] of Object.entries(params)) {
         url.searchParams.set(key, value);
     }

@@ -2,6 +2,8 @@ import { config } from "../config.js";
 import type { AgentTool } from "./tools.js";
 
 // Lightweight Supabase REST client (no SDK needed for simple queries)
+// Uses internal URL on the server (bypasses Cloudflare), public URL locally
+const supabaseUrl = config.SUPABASE_INTERNAL_URL ?? config.SUPABASE_URL;
 const supabaseHeaders = {
     "Content-Type": "application/json",
     "apikey": config.SUPABASE_SERVICE_ROLE_KEY,
@@ -10,7 +12,7 @@ const supabaseHeaders = {
 };
 
 async function supabaseQuery(table: string, params: Record<string, string> = {}): Promise<any[]> {
-    const url = new URL(`${config.SUPABASE_URL}/rest/v1/${table}`);
+    const url = new URL(`${supabaseUrl}/rest/v1/${table}`);
     for (const [key, value] of Object.entries(params)) {
         url.searchParams.set(key, value);
     }
