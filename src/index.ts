@@ -1,5 +1,8 @@
 import { initFirebase } from "./db/firebase.js";
 import { startBot } from "./bot/index.js";
+import { config } from "./config.js";
+import express from "express";
+import appsheetWebhook from "./api/webhook.js";
 
 const bootstrap = async () => {
     try {
@@ -11,7 +14,18 @@ const bootstrap = async () => {
         initFirebase();
 
         // 2. Start Bot
-        await startBot();
+        const botPromise = startBot();
+
+        // 3. Start Webhook Server
+        const app = express();
+        app.use("/api/webhook", appsheetWebhook);
+
+        const PORT = config.PORT;
+        app.listen(PORT, () => {
+            console.log(`📡 Servidor de Webhooks activo en puerto ${PORT}`);
+        });
+
+        await botPromise;
 
         console.log("----------------------------------------");
         console.log("✨ ¡jAIme está corriendo y listo!");

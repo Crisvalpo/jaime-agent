@@ -12,7 +12,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/express": "^5.0.6",
     "dotenv": "^17.3.1",
+    "express": "^5.2.1",
     "firebase-admin": "^13.7.0",
     "grammy": "^1.41.1",
     "openai": "^6.27.0",

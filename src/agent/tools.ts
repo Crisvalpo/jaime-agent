@@ -1,5 +1,6 @@
 import { setMemory, getMemory, getAllMemories } from "../db/store.js";
 import { lukeappTools } from "./lukeapp.js";
+import { appsheetTools } from "./appsheet.js";
 
 // userId is always passed from the bot handler, "unknown" as safe fallback
 type ToolExecutor = (args: any, userId: string) => Promise<string> | string;
@@ -94,8 +95,8 @@ const coreTools: Record<string, AgentTool> = {
     },
 };
 
-// Merge core tools with LukeAPP data tools
-const allTools: Record<string, AgentTool> = { ...coreTools, ...lukeappTools };
+// Merge core tools with LukeAPP data tools and AppSheet
+const allTools: Record<string, AgentTool> = { ...coreTools, ...lukeappTools, ...appsheetTools };
 
 export const getToolDefinitions = () => Object.values(allTools).map(t => t.definition);
 

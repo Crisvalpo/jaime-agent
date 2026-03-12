@@ -1,21 +1,23 @@
 import { Bot } from "grammy";
 import { config } from "../config.js";
 import { authMiddleware } from "./auth.js";
-import { handleMessage } from "./handlers.js";
+import { handleMessage, handleVincular } from "./handlers.js";
 
-const bot = new Bot(config.TELEGRAM_BOT_TOKEN);
+export const bot = new Bot(config.TELEGRAM_BOT_TOKEN);
 
 // Apply middleware
 bot.use(authMiddleware);
 
 // Define commands and handlers
 bot.command("start", async (ctx) => {
-    await ctx.reply("👋 ¡Hola! Soy jAIme, tu asistente personal. Estoy listo.");
+    await ctx.reply("soy el bot de luke app estoy para notificarte los cambios de LukeAPP.");
 });
 
 bot.command("help", async (ctx) => {
-    await ctx.reply("Solo dime lo que necesitas y me encargaré de pensarlo y actuar.");
+    await ctx.reply("Comandos disponibles:\n/start - Iniciar bot\n/vincular [Usuario] [Rol] - Vincular tu ID de Telegram");
 });
+
+bot.command("vincular", handleVincular);
 
 // Main message handler
 bot.on("message:text", handleMessage);
