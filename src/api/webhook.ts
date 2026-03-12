@@ -10,29 +10,40 @@ const router = express.Router();
 router.post("/appsheet", express.json(), async (req, res) => {
     try {
         const payload = req.body;
-        const { telegramId, message } = payload;
+        const { telegramId, notificationType, message } = payload;
 
-        if (!telegramId || !message) {
-            console.warn("⚠️ Webhook recibido con campos faltantes:", payload);
-            return res.status(400).json({ error: "Faltan campos telegramId o message" });
+        if (!message) {
+            return res.status(400).json({ error: "Falta el campo message" });
         }
 
-        console.log(`[Webhook] Enviando notificación a ${telegramId}`);
+        let recipients: string[] = [];
 
-        try {
-            // Intento 1: Con Markdown
-            await bot.api.sendMessage(telegramId, message, { parse_mode: "Markdown" });
-        } catch (error: any) {
-            if (error.description?.includes("can't parse entities")) {
-                console.warn("⚠️ Markdown inválido, reintentando como texto plano...");
-                // Intento 2: Texto plano (Fallback)
-                await bot.api.sendMessage(telegramId, message);
-            } else {
-                throw error;
+        if (telegramId) {
+            recipients.push(telegramId);
+        } else if (notificationType) {
+            console.log(`[Webhook] Buscando destinatarios para: ${notificationType}`);
+            const { getNotificationRecipients } = await import("../agent/appsheet.js");
+            recipients = await getNotificationRecipients(notificationType);
+        }
+
+        if (recipients.length === 0) {
+            console.warn("⚠️ No se encontraron destinatarios para la notificación:", payload);
+            return res.status(200).json({ status: "No recipients found" });
+        }
+
+        console.log(`[Webhook] Enviando notificación a ${recipients.length} usuarios`);
+
+        const sendPromises = recipients.map(async (id) => {
+            try {
+                await bot.api.sendMessage(id, message);
+            } catch (err: any) {
+                console.error(`❌ Error enviando a ${id}:`, err.message);
             }
-        }
+        });
 
-        return res.status(200).json({ status: "OK" });
+        await Promise.all(sendPromises);
+
+        return res.status(200).json({ status: "OK", sentCount: recipients.length });
     } catch (error: any) {
         console.error("❌ Error en Webhook AppSheet:", error);
         return res.status(500).json({ error: error.message });
