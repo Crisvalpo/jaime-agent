@@ -7,10 +7,18 @@ const router = express.Router();
  * AppSheet Webhook Endpoint
  * Expects JSON: { "telegramId": "12345", "message": "Tu spool ha sido liberado" }
  */
-router.post("/appsheet", express.json(), async (req, res) => {
+router.post("/appsheet", express.text({ type: 'application/json' }), async (req, res) => {
     try {
-        const payload = req.body;
-        console.log("📥 [Webhook] Payload recibido:", JSON.stringify(payload, null, 2));
+        const rawBody = req.body;
+        console.log("📥 [Webhook] Raw Body recibido:", rawBody);
+
+        let payload;
+        try {
+            payload = JSON.parse(rawBody);
+        } catch (e: any) {
+            console.error("❌ Error parseando JSON:", e.message);
+            return res.status(400).json({ error: "JSON malformado", details: e.message, raw: rawBody });
+        }
 
         const { telegramId, message } = payload;
 
