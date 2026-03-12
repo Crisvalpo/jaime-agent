@@ -90,13 +90,19 @@ export const getNotificationRecipients = async (notificationType: string): Promi
         if (!configRes.ok) return [];
         const configData = await configRes.json();
 
-        const activeRoles = configData
+        // Obtenemos todos los roles habilitados (soportando si Rol es una lista separada por comas)
+        const activeRolesSet = new Set<string>();
+        configData
             .filter((c: any) => c.ID_NOTIFICACIONES === notificationType && (c.ACTIVO === "true" || c.ACTIVO === true || c.ACTIVO === "Y"))
-            .map((c: any) => c.ROL?.toLowerCase());
+            .forEach((c: any) => {
+                if (c.ROL) {
+                    c.ROL.split(",").forEach((r: string) => activeRolesSet.add(r.trim().toLowerCase()));
+                }
+            });
 
-        if (activeRoles.length === 0) return [];
+        if (activeRolesSet.size === 0) return [];
 
-        // 2. Obtener todos los usuarios que tengan esos roles
+        // 2. Obtener todos los usuarios que tengan alguno de esos roles
         const usersUrl = `https://api.appsheet.com/api/v2/apps/${config.APPSHEET_APP_ID}/tables/LIST_usuariosApp_MS/Action`;
         const usersRes = await fetch(usersUrl, {
             method: 'POST',
@@ -115,10 +121,15 @@ export const getNotificationRecipients = async (notificationType: string): Promi
         const usersData = await usersRes.json();
 
         const recipients = usersData
-            .filter((u: any) => u.TELEGRAM_ID && activeRoles.includes(u.ROL?.toLowerCase()))
+            .filter((u: any) => {
+                if (!u.TELEGRAM_ID || !u.ROL) return false;
+                // Soportamos si el usuario tiene múltiples roles asignados (EnumList)
+                const userRoles = u.ROL.split(",").map((r: string) => r.trim().toLowerCase());
+                return userRoles.some((role: string) => activeRolesSet.has(role));
+            })
             .map((u: any) => u.TELEGRAM_ID);
 
-        return Array.from(new Set(recipients)); // Eliminar duplicados
+        return Array.from(new Set(recipients));
     } catch (error) {
         console.error("[AppSheet] Error obteniendo destinatarios:", error);
         return [];
