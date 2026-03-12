@@ -59,6 +59,7 @@ export const handleVincular = async (ctx: Context) => {
         const success = await updateAppsheetTelegramId(user.USUARIO, telegramId);
 
         if (success) {
+            console.log(`[Bot] Vinculación exitosa para usuario: ${usuario} (${telegramId})`);
             await ctx.reply(`✅ ¡Vinculación exitosa!\n\nUsuario: \`${usuario}\`\nRol: \`${rol}\`\nTu Telegram ID (\`${telegramId}\`) ha sido guardado automáticamente en la columna \`TELEGRAM_ID\`.`, { parse_mode: "Markdown" });
         } else {
             await ctx.reply("❌ Error al actualizar AppSheet. Verifica que la columna `TELEGRAM_ID` sea editable por la API.");
