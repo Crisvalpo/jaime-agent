@@ -9,10 +9,13 @@ const router = express.Router();
  */
 router.post("/appsheet", express.json(), async (req, res) => {
     try {
-        const { telegramId, message } = req.body;
+        const payload = req.body;
+        console.log("📥 [Webhook] Payload recibido:", JSON.stringify(payload, null, 2));
+
+        const { telegramId, message } = payload;
 
         if (!telegramId || !message) {
-            console.warn("⚠️ Webhook recibido sin telegramId o message:", req.body);
+            console.warn("⚠️ Webhook recibido con campos faltantes:", payload);
             return res.status(400).json({ error: "Faltan campos telegramId o message" });
         }
 
@@ -24,6 +27,9 @@ router.post("/appsheet", express.json(), async (req, res) => {
         return res.status(200).json({ status: "OK" });
     } catch (error: any) {
         console.error("❌ Error en Webhook AppSheet:", error);
+        if (error.response) {
+            console.error("Detalle del error de Telegram API:", JSON.stringify(error.response, null, 2));
+        }
         return res.status(500).json({ error: error.message });
     }
 });
