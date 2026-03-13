@@ -10,11 +10,11 @@ bot.use(authMiddleware);
 
 // Define commands and handlers
 bot.command("start", async (ctx) => {
-    await ctx.reply("soy el bot de luke app estoy para notificarte los cambios de LukeAPP.");
+    await ctx.reply("Soy jAIme estoy para notificarte los cambios y avances en LukeAPP-Andina .");
 });
 
 bot.command("help", async (ctx) => {
-    await ctx.reply("Comandos disponibles:\n/start - Iniciar bot\n/vincular [Usuario] [Rol] - Vincular tu ID de Telegram");
+    await ctx.reply("Comandos disponibles:\n/start - Iniciar bot\n/vincular \"Nombre Apellido\" - Vincular tu ID de Telegram");
 });
 
 bot.command("vincular", handleVincular);

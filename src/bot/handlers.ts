@@ -7,52 +7,48 @@ export const handleMessage = async (ctx: Context) => {
     const userText = ctx.message?.text || "";
     if (userText.startsWith("/")) return; // Dejar que los comandos se manejen por separado
 
-    await ctx.reply("🤖 Soy el bot de LukeAPP y solo estoy configurado para enviar notificaciones automáticas. No puedo responder preguntas.");
+    await ctx.reply("🤖 Soy jAIme y solo estoy configurado para enviar notificaciones automáticas y resolver dudas sobre LukeAPP-Andina. No puedo conversar libremente aquí.");
 };
 
 export const handleVincular = async (ctx: Context) => {
     const text = ctx.message?.text || "";
 
-    // Mejorar el parsing para soportar espacios dentro de corchetes [Andres Tapia] o comillas "Andres Tapia"
-    // Intentamos buscar patrones [Nombre] [Rol] o "Nombre" "Rol" o simplemente dividido por espacios
-    const bracketRegex = /\[(.*?)\]\s*\[(.*?)\]/;
-    const quoteRegex = /"(.*?)"\s*"(.*?)"/;
+    // Soportar [Nombre completo] o "Nombre completo"
+    const bracketRegex = /\[(.*?)\]/;
+    const quoteRegex = /"(.*?)"/;
 
     let usuario = "";
-    let rol = "";
 
     const bracketMatch = text.match(bracketRegex);
     const quoteMatch = text.match(quoteRegex);
 
     if (bracketMatch) {
         usuario = bracketMatch[1];
-        rol = bracketMatch[2];
     } else if (quoteMatch) {
         usuario = quoteMatch[1];
-        rol = quoteMatch[2];
     } else {
+        // Si no hay brackets ni comillas, tomamos todo el texto tras el comando
         const parts = text.split(" ").filter(p => !!p);
-        if (parts.length >= 3) {
-            usuario = parts[1];
-            rol = parts.slice(2).join(" "); // Asumimos que el resto es el rol o manejamos error
+        if (parts.length >= 2) {
+            usuario = parts.slice(1).join(" ");
         }
     }
 
-    if (!usuario || !rol) {
-        await ctx.reply("❌ Formato incorrecto.\n\nUsa: `/vincular [Usuario] [Rol]`\n(Usa los corchetes si el nombre tiene espacios)\n\nEjemplo: `/vincular [Andres Tapia] [ADMIN]`", { parse_mode: "Markdown" });
+    if (!usuario) {
+        await ctx.reply("❌ Formato incorrecto.\n\nUsa: `/vincular \"Nombre Apellido\"`\n(Usa las comillas si el nombre tiene espacios)", { parse_mode: "Markdown" });
         return;
     }
 
     const telegramId = ctx.from?.id.toString();
     if (!telegramId) return;
 
-    await ctx.reply(`⏳ Buscando a \`${usuario}\` con rol \`${rol}\` en AppSheet...`, { parse_mode: "Markdown" });
+    await ctx.reply(`⏳ Buscando a \`${usuario}\` en LukeAPP...`, { parse_mode: "Markdown" });
 
     try {
-        const user = await findAppsheetUser(usuario, rol);
+        const user = await findAppsheetUser(usuario);
 
         if (!user) {
-            await ctx.reply(`❌ No encontré un usuario con Nombre: \`${usuario}\` y Rol: \`${rol}\` en AppSheet.\n\n*Nota:* Revisa que el nombre y rol coincidan exactamente como están en el Excel (incluyendo espacios y mayúsculas).`, { parse_mode: "Markdown" });
+            await ctx.reply(`❌ No encontré un usuario con Nombre: \`${usuario}\` en LukeAPP.\n\n*Nota:* Revisa que el nombre coincida exactamente (100%) como está en la App (espacios y mayúsculas).`, { parse_mode: "Markdown" });
             return;
         }
 
@@ -60,12 +56,12 @@ export const handleVincular = async (ctx: Context) => {
 
         if (success) {
             console.log(`[Bot] Vinculación exitosa para usuario: ${usuario} (${telegramId})`);
-            await ctx.reply(`✅ ¡Vinculación exitosa!\n\nUsuario: \`${usuario}\`\nRol: \`${rol}\`\nTu Telegram ID (\`${telegramId}\`) ha sido guardado automáticamente en la columna \`TELEGRAM_ID\`.`, { parse_mode: "Markdown" });
+            await ctx.reply(`✅ ¡Vinculación exitosa!\n\nUsuario: ${user.USUARIO}\nPerfil: ${user.ROL}\nAhora recibirás notificaciones de acuerdo a tu perfil.`);
         } else {
-            await ctx.reply("❌ Error al actualizar AppSheet. Verifica que la columna `TELEGRAM_ID` sea editable por la API.");
+            await ctx.reply("❌ Error al actualizar LukeAPP. Verifica que la columna `TELEGRAM_ID` sea editable por la API.");
         }
     } catch (error: any) {
         console.error("Error en handleVincular:", error);
-        await ctx.reply("❌ Error inesperado al conectar con AppSheet.");
+        await ctx.reply("❌ Error inesperado al conectar con LukeAPP.");
     }
 };

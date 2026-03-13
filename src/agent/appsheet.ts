@@ -7,7 +7,7 @@ export const appsheetTools = {};
 /**
  * Helper to find a user by Usuario and Rol
  */
-export const findAppsheetUser = async (usuario: string, rol: string) => {
+export const findAppsheetUser = async (usuario: string) => {
     const url = `https://api.appsheet.com/api/v2/apps/${config.APPSHEET_APP_ID}/tables/LIST_usuariosApp_MS/Action`;
     const response = await fetch(url, {
         method: 'POST',
@@ -26,10 +26,7 @@ export const findAppsheetUser = async (usuario: string, rol: string) => {
     const data = await response.json();
     if (!Array.isArray(data)) return null;
 
-    return data.find((u: any) =>
-        u.USUARIO?.toLowerCase() === usuario.toLowerCase() &&
-        u.ROL?.toLowerCase() === rol.toLowerCase()
-    );
+    return data.find((u: any) => u.USUARIO === usuario);
 };
 
 /**
@@ -131,7 +128,7 @@ export const getNotificationRecipients = async (notificationType: string): Promi
 
         return Array.from(new Set(recipients));
     } catch (error) {
-        console.error("[AppSheet] Error obteniendo destinatarios:", error);
+        console.error("[LukeAPP] Error obteniendo destinatarios:", error);
         return [];
     }
 };
