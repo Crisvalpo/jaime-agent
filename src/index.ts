@@ -18,11 +18,18 @@ const bootstrap = async () => {
 
         // 3. Start Webhook Server
         const app = express();
+
+        // Health check endpoint (Top level)
+        app.get("/health", (req, res) => {
+            res.status(200).json({ status: "OK", timestamp: new Date().toISOString() });
+        });
+
         app.use("/api/webhook", appsheetWebhook);
 
         const PORT = config.PORT;
-        app.listen(PORT, () => {
+        app.listen(PORT, "0.0.0.0", () => {
             console.log(`📡 Servidor de Webhooks activo en puerto ${PORT}`);
+            console.log(`🏠 Health check disponible en: http://localhost:${PORT}/health`);
         });
 
         await botPromise;

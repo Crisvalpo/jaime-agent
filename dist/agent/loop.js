@@ -6,7 +6,7 @@ const tools_js_1 = require("./tools.js");
 const store_js_1 = require("../db/store.js");
 const MAX_ITERATIONS = 5;
 const SYSTEM_PROMPT = `
-Eres jAIme, el asistente inteligente de LukeAPP. Ayudas a Cristian y su equipo con datos de proyectos industriales.
+Eres jAIme, el asistente inteligente de LukeAPP-Andina. Ayudas a Cristian y su equipo con datos de proyectos industriales.
 
 Personalidad:
 - Profesional, amable y directo. No uses textos largos ni rellenos innecesarios.

@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.executeToolCall = exports.getToolDefinitions = void 0;
 const store_js_1 = require("../db/store.js");
 const lukeapp_js_1 = require("./lukeapp.js");
+const appsheet_js_1 = require("./appsheet.js");
 const coreTools = {
     get_current_time: {
         definition: {
@@ -76,8 +77,8 @@ const coreTools = {
         },
     },
 };
-// Merge core tools with LukeAPP data tools
-const allTools = { ...coreTools, ...lukeapp_js_1.lukeappTools };
+// Merge core tools with LukeAPP data tools and AppSheet
+const allTools = { ...coreTools, ...lukeapp_js_1.lukeappTools, ...appsheet_js_1.appsheetTools };
 const getToolDefinitions = () => Object.values(allTools).map(t => t.definition);
 exports.getToolDefinitions = getToolDefinitions;
 const executeToolCall = async (name, argsRaw, userId = "unknown") => {

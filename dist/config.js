@@ -19,6 +19,9 @@ const envSchema = zod_1.z.object({
     SUPABASE_URL: zod_1.z.string().url().min(1, "Supabase URL is required"),
     SUPABASE_INTERNAL_URL: zod_1.z.string().url().optional(),
     SUPABASE_SERVICE_ROLE_KEY: zod_1.z.string().min(1, "Supabase Service Role Key is required"),
+    APPSHEET_APP_ID: zod_1.z.string().min(1, "AppSheet App ID is required"),
+    APPSHEET_ACCESS_KEY: zod_1.z.string().min(1, "AppSheet Access Key is required"),
+    PORT: zod_1.z.string().default("3001").transform(val => parseInt(val, 10)),
 });
 const parseEnv = () => {
     const result = envSchema.safeParse(process.env);
