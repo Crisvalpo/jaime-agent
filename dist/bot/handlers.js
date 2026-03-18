@@ -8,7 +8,7 @@ const handleMessage = async (ctx) => {
     const userText = ctx.message?.text || "";
     if (userText.startsWith("/"))
         return; // Dejar que los comandos se manejen por separado
-    await ctx.reply("🤖 Soy jAIme y solo estoy configurado para enviar notificaciones automáticas y resolver dudas sobre LukeAPP-Andina. No puedo conversar libremente aquí.");
+    await ctx.reply("🤖 Soy **jAIme v4.0** y solo estoy configurado para enviar notificaciones oficiales de **LukeAPP**.", { parse_mode: "Markdown" });
 };
 exports.handleMessage = handleMessage;
 const handleVincular = async (ctx) => {
@@ -41,11 +41,13 @@ const handleVincular = async (ctx) => {
     const telegramId = ctx.from?.id.toString();
     if (!telegramId)
         return;
-    await ctx.reply(`⏳ Buscando a \`${usuario}\` en LukeAPP...`, { parse_mode: "Markdown" });
+    console.log(`[Bot] Buscando usuario: "${usuario}"`);
+    await ctx.reply(`🔍 Buscando a \`${usuario}\` en LukeAPP-Server...`, { parse_mode: "Markdown" });
     try {
         const user = await (0, appsheet_js_1.findAppsheetUser)(usuario);
         if (!user) {
-            await ctx.reply(`❌ No encontré un usuario con Nombre: \`${usuario}\` en LukeAPP.\n\n*Nota:* Revisa que el nombre coincida exactamente (100%) como está en la App (espacios y mayúsculas).`, { parse_mode: "Markdown" });
+            console.log(`[Bot] Usuario no encontrado: "${usuario}"`);
+            await ctx.reply(`🚫 No encontré un usuario con Nombre: \`${usuario}\` en LukeAPP.\n\n*Nota:* Revisa que el nombre coincida exactamente con la App.`, { parse_mode: "Markdown" });
             return;
         }
         const success = await (0, appsheet_js_1.updateAppsheetTelegramId)(user.USUARIO, telegramId);
