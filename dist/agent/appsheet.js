@@ -26,7 +26,8 @@ const findAppsheetUser = async (usuario) => {
     const data = await response.json();
     if (!Array.isArray(data))
         return null;
-    return data.find((u) => u.USUARIO === usuario);
+    const target = usuario.trim().toLowerCase();
+    return data.find((u) => u.USUARIO && u.USUARIO.trim().toLowerCase() === target);
 };
 exports.findAppsheetUser = findAppsheetUser;
 /**
@@ -88,7 +89,7 @@ const getNotificationRecipients = async (notificationType) => {
         // Obtenemos todos los roles habilitados (soportando si Rol es una lista separada por comas)
         const activeRolesSet = new Set();
         configData
-            .filter((c) => c.ID_NOTIFICACIONES === notificationType && (c.ACTIVO === "true" || c.ACTIVO === true || c.ACTIVO === "Y"))
+            .filter((c) => c.ID_NOTIFICACIONES === notificationType && (c.ACTIVO === "true" || c.ACTIVO === true || c.ACTIVO === "Y" || c.ACTIVO === "VERDADERO"))
             .forEach((c) => {
             if (c.ROL) {
                 c.ROL.split(",").forEach((r) => activeRolesSet.add(r.trim().toLowerCase()));
