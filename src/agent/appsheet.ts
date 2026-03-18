@@ -26,14 +26,33 @@ export const findAppsheetUser = async (usuario: string) => {
     const data = await response.json();
     if (!Array.isArray(data)) return null;
 
+    console.log(`[AppSheet API] Respuesta (${data.length} filas obtenidas)`);
+    if (data.length > 0) {
+        console.log(`[AppSheet API] Ejemplo de fila (1):`, JSON.stringify(data[0]));
+    }
+
     // Normalizar: Trim, minúsculas y convertir múltiples espacios en uno solo
     const target = usuario.trim().toLowerCase().replace(/\s+/g, ' ');
+    console.log(`[AppSheet API] Query normalizado: "${target}"`);
 
-    return data.find((u: any) => {
+    const user = data.find((u: any) => {
         if (!u.USUARIO) return false;
         const normalized = u.USUARIO.toString().trim().toLowerCase().replace(/\s+/g, ' ');
+
+        if (normalized.includes(target) || target.includes(normalized)) {
+            console.log(`[AppSheet API] Match parcial encontrado: "${normalized}" <=> "${target}"`);
+        }
+
         return normalized === target;
     });
+
+    if (user) {
+        console.log(`[AppSheet API] ¡Match exacto! Encontrado:`, user.USUARIO);
+    } else {
+        console.log(`[AppSheet API] No hubo match exacto para "${target}"`);
+    }
+
+    return user;
 };
 
 /**
