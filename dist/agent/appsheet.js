@@ -21,11 +21,17 @@ const findAppsheetUser = async (usuario) => {
             Rows: []
         })
     });
-    if (!response.ok)
+    if (!response.ok) {
+        console.error(`[AppSheet API] FAIL: HTTP ${response.status} ${response.statusText}`);
+        const text = await response.text();
+        console.error(`[AppSheet API] Body:`, text);
         return null;
+    }
     const data = await response.json();
-    if (!Array.isArray(data))
+    if (!Array.isArray(data)) {
+        console.error(`[AppSheet API] FAIL: Data is not an array. Data:`, data);
         return null;
+    }
     console.log(`[AppSheet API] Respuesta (${data.length} filas obtenidas)`);
     if (data.length > 0) {
         console.log(`[AppSheet API] Ejemplo de fila (1):`, JSON.stringify(data[0]));
