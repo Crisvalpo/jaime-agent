@@ -14,7 +14,12 @@ bot.command("start", async (ctx) => {
 });
 
 bot.command("help", async (ctx) => {
-    await ctx.reply("📌 **Comandos disponibles:**\n\n/start - Iniciar bot y ver bienvenida.\n/vincular \"Nombre Apellido\" - Vincular tu cuenta de LukeAPP usando solo tu nombre.", { parse_mode: "Markdown" });
+    const helpText = `
+🤖 **Comandos disponibles:**
+- \`/vincular Tu Nombre\` → Te conecta con tu perfil en AppSheet (ej. \`/vincular Juan Perez\`)
+- \`/help\` → Muestra este mensaje.
+`;
+    await ctx.reply(helpText, { parse_mode: "Markdown" });
 });
 
 bot.command("vincular", handleVincular);

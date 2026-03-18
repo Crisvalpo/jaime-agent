@@ -35,7 +35,7 @@ export const handleVincular = async (ctx: Context) => {
     }
 
     if (!usuario) {
-        await ctx.reply("❌ Formato incorrecto.\n\nUsa: `/vincular \"Nombre Apellido\"`\n(Usa las comillas si el nombre tiene espacios)", { parse_mode: "Markdown" });
+        await ctx.reply("❌ Formato incorrecto.\n\nSimplemente escribe: `/vincular Tu Nombre`", { parse_mode: "Markdown" });
         return;
     }
 
@@ -56,6 +56,7 @@ export const handleVincular = async (ctx: Context) => {
             await ctx.reply(`🚫 No encontré un usuario con Nombre: \`${usuario}\` en LukeAPP.\n\n*Nota:* Revisa que el nombre coincida exactamente con la App.`, { parse_mode: "Markdown" });
             return;
         }
+
 
         const success = await updateAppsheetTelegramId(user.USUARIO, telegramId);
 
