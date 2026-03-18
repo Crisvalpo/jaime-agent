@@ -39,13 +39,13 @@ export const findAppsheetUser = async (usuario: string) => {
         console.log(`[AppSheet API] Ejemplo de fila (1):`, JSON.stringify(data[0]));
     }
 
-    // Normalizar: Trim, minúsculas y convertir múltiples espacios en uno solo
-    const target = usuario.trim().toLowerCase().replace(/\s+/g, ' ');
+    // Normalizar: Trim, minúsculas, remover TODAS las comillas (normales y tipográficas), y convertir múltiples espacios
+    const target = usuario.trim().toLowerCase().replace(/["'“”‘’]/g, '').replace(/\s+/g, ' ');
     console.log(`[AppSheet API] Query normalizado: "${target}"`);
 
     const user = data.find((u: any) => {
         if (!u.USUARIO) return false;
-        const normalized = u.USUARIO.toString().trim().toLowerCase().replace(/\s+/g, ' ');
+        const normalized = u.USUARIO.toString().trim().toLowerCase().replace(/["'“”‘’]/g, '').replace(/\s+/g, ' ');
 
         if (normalized.includes(target) || target.includes(normalized)) {
             console.log(`[AppSheet API] Match parcial encontrado: "${normalized}" <=> "${target}"`);
