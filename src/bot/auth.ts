@@ -10,12 +10,12 @@ export const authMiddleware = async (ctx: Context, next: NextFunction) => {
         return;
     }
 
-    if (!config.TELEGRAM_ALLOWED_USER_IDS.includes(userId)) {
-        console.warn(`🛑 Unauthorized access attempt by User ID: ${userId} (@${ctx.from?.username || "unknown"})`);
-        // Optional: Send a generic rejection message or simply ignore them.
-        // await ctx.reply("❌ No tienes autorización para usar este bot.");
-        return;
-    }
+    // Permitimos acceso a cualquier usuario porque la seguridad
+    // ahora depende del comando /vincular contra AppSheet.
+    // if (!config.TELEGRAM_ALLOWED_USER_IDS.includes(userId)) {
+    //     console.warn(`🛑 Unauthorized access attempt by User ID: ${userId} (@${ctx.from?.username || "unknown"})`);
+    //     return;
+    // }
 
     // User is allowed, proceed to the next handler
     await next();
