@@ -10,11 +10,11 @@ bot.use(authMiddleware);
 
 // Define commands and handlers
 bot.command("start", async (ctx) => {
-    await ctx.reply("Soy jAIme estoy para notificarte los cambios y avances en LukeAPP-Andina .");
+    await ctx.reply("🤖 ¡Hola! Soy **jAIme**, tu asistente de notificaciones oficiales de **LukeAPP**.\n\nMi función es mantenerte informado en tiempo real sobre cambios críticos, como nuevas revisiones de isométricos y alertas de gestión.\n\nPara comenzar, usa el comando `/vincular \"Tu Nombre\"` para registrarte. ¡Es todo lo que necesito!", { parse_mode: "Markdown" });
 });
 
 bot.command("help", async (ctx) => {
-    await ctx.reply("Comandos disponibles:\n/start - Iniciar bot\n/vincular \"Nombre Apellido\" - Vincular tu ID de Telegram");
+    await ctx.reply("📌 **Comandos disponibles:**\n\n/start - Iniciar bot y ver bienvenida.\n/vincular \"Nombre Apellido\" - Vincular tu cuenta de LukeAPP usando solo tu nombre.", { parse_mode: "Markdown" });
 });
 
 bot.command("vincular", handleVincular);

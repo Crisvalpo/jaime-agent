@@ -10,10 +10,10 @@ exports.bot = new grammy_1.Bot(config_js_1.config.TELEGRAM_BOT_TOKEN);
 exports.bot.use(auth_js_1.authMiddleware);
 // Define commands and handlers
 exports.bot.command("start", async (ctx) => {
-    await ctx.reply("Soy jAIme estoy para notificarte los cambios y avances en LukeAPP-Andina .");
+    await ctx.reply("🤖 ¡Hola! Soy **jAIme**, tu asistente de notificaciones oficiales de **LukeAPP**.\n\nMi función es mantenerte informado en tiempo real sobre cambios críticos, como nuevas revisiones de isométricos y alertas de gestión.\n\nPara comenzar, usa el comando `/vincular \"Tu Nombre\"` para registrarte. ¡Es todo lo que necesito!", { parse_mode: "Markdown" });
 });
 exports.bot.command("help", async (ctx) => {
-    await ctx.reply("Comandos disponibles:\n/start - Iniciar bot\n/vincular \"Nombre Apellido\" - Vincular tu ID de Telegram");
+    await ctx.reply("📌 **Comandos disponibles:**\n\n/start - Iniciar bot y ver bienvenida.\n/vincular \"Nombre Apellido\" - Vincular tu cuenta de LukeAPP usando solo tu nombre.", { parse_mode: "Markdown" });
 });
 exports.bot.command("vincular", handlers_js_1.handleVincular);
 // Main message handler

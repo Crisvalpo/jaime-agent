@@ -26,8 +26,14 @@ const findAppsheetUser = async (usuario) => {
     const data = await response.json();
     if (!Array.isArray(data))
         return null;
-    const target = usuario.trim().toLowerCase();
-    return data.find((u) => u.USUARIO && u.USUARIO.trim().toLowerCase() === target);
+    // Normalizar: Trim, minúsculas y convertir múltiples espacios en uno solo
+    const target = usuario.trim().toLowerCase().replace(/\s+/g, ' ');
+    return data.find((u) => {
+        if (!u.USUARIO)
+            return false;
+        const normalized = u.USUARIO.toString().trim().toLowerCase().replace(/\s+/g, ' ');
+        return normalized === target;
+    });
 };
 exports.findAppsheetUser = findAppsheetUser;
 /**

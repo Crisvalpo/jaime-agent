@@ -36,6 +36,8 @@ const handleVincular = async (ctx) => {
         await ctx.reply("❌ Formato incorrecto.\n\nUsa: `/vincular \"Nombre Apellido\"`\n(Usa las comillas si el nombre tiene espacios)", { parse_mode: "Markdown" });
         return;
     }
+    // Normalizar espacios internos (convertir múltiples espacios en uno solo)
+    usuario = usuario.trim().replace(/\s+/g, ' ');
     const telegramId = ctx.from?.id.toString();
     if (!telegramId)
         return;

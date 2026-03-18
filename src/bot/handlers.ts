@@ -39,6 +39,9 @@ export const handleVincular = async (ctx: Context) => {
         return;
     }
 
+    // Normalizar espacios internos (convertir múltiples espacios en uno solo)
+    usuario = usuario.trim().replace(/\s+/g, ' ');
+
     const telegramId = ctx.from?.id.toString();
     if (!telegramId) return;
 
