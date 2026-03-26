@@ -42,7 +42,6 @@ const bootstrap = async () => {
             console.log("⏰ Ejecutando cron job: PIPING_REPORTE_DIARIO (19:00)");
             runDailyPipingReport();
         }, {
-            scheduled: true,
             timezone: "America/Santiago"
         });
         console.log("⏰ Cron Jobs programados: PIPING_REPORTE_DIARIO (19:00 L-V)");

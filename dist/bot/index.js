@@ -13,7 +13,12 @@ exports.bot.command("start", async (ctx) => {
     await ctx.reply("🤖 ¡Hola! Soy **jAIme**, tu asistente de notificaciones oficiales de **LukeAPP**.\n\nMi función es mantenerte informado en tiempo real sobre cambios críticos, como nuevas revisiones de isométricos y alertas de gestión.\n\nPara comenzar, usa el comando `/vincular \"Tu Nombre\"` para registrarte. ¡Es todo lo que necesito!", { parse_mode: "Markdown" });
 });
 exports.bot.command("help", async (ctx) => {
-    await ctx.reply("📌 **Comandos disponibles:**\n\n/start - Iniciar bot y ver bienvenida.\n/vincular \"Nombre Apellido\" - Vincular tu cuenta de LukeAPP usando solo tu nombre.", { parse_mode: "Markdown" });
+    const helpText = `
+🤖 **Comandos disponibles:**
+- \`/vincular Tu Nombre\` → Te conecta con tu perfil en AppSheet (ej. \`/vincular Juan Perez\`)
+- \`/help\` → Muestra este mensaje.
+`;
+    await ctx.reply(helpText, { parse_mode: "Markdown" });
 });
 exports.bot.command("vincular", handlers_js_1.handleVincular);
 // Main message handler

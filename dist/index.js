@@ -8,6 +8,8 @@ const index_js_1 = require("./bot/index.js");
 const config_js_1 = require("./config.js");
 const express_1 = __importDefault(require("express"));
 const webhook_js_1 = __importDefault(require("./api/webhook.js"));
+const node_cron_1 = __importDefault(require("node-cron"));
+const pipingReport_js_1 = require("./scheduler/pipingReport.js");
 const bootstrap = async () => {
     try {
         console.log("----------------------------------------");
@@ -30,6 +32,15 @@ const bootstrap = async () => {
             console.log(`🏠 Health check disponible en: http://localhost:${PORT}/health`);
         });
         await botPromise;
+        // 4. Iniciar Programaciones (Cron Jobs)
+        // Ejecutar de Lunes a Viernes a las 19:00 hrs
+        node_cron_1.default.schedule("0 19 * * 1-5", () => {
+            console.log("⏰ Ejecutando cron job: PIPING_REPORTE_DIARIO (19:00)");
+            (0, pipingReport_js_1.runDailyPipingReport)();
+        }, {
+            timezone: "America/Santiago"
+        });
+        console.log("⏰ Cron Jobs programados: PIPING_REPORTE_DIARIO (19:00 L-V)");
         console.log("----------------------------------------");
         console.log("✨ ¡jAIme está corriendo y listo!");
         console.log("----------------------------------------");
