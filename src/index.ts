@@ -3,6 +3,8 @@ import { startBot } from "./bot/index.js";
 import { config } from "./config.js";
 import express from "express";
 import appsheetWebhook from "./api/webhook.js";
+import cron from "node-cron";
+import { runDailyPipingReport } from "./scheduler/pipingReport.js";
 
 const bootstrap = async () => {
     try {
@@ -33,6 +35,17 @@ const bootstrap = async () => {
         });
 
         await botPromise;
+
+        // 4. Iniciar Programaciones (Cron Jobs)
+        // Ejecutar de Lunes a Viernes a las 19:00 hrs
+        cron.schedule("0 19 * * 1-5", () => {
+            console.log("⏰ Ejecutando cron job: PIPING_REPORTE_DIARIO (19:00)");
+            runDailyPipingReport();
+        }, {
+            scheduled: true,
+            timezone: "America/Santiago"
+        });
+        console.log("⏰ Cron Jobs programados: PIPING_REPORTE_DIARIO (19:00 L-V)");
 
         console.log("----------------------------------------");
         console.log("✨ ¡jAIme está corriendo y listo!");
