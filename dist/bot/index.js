@@ -16,11 +16,13 @@ exports.bot.command("help", async (ctx) => {
     const helpText = `
 🤖 **Comandos disponibles:**
 - \`/vincular Tu Nombre\` → Te conecta con tu perfil en AppSheet (ej. \`/vincular Juan Perez\`)
+- \`/reporte\` → Genera el resumen diario de Piping ahora mismo.
 - \`/help\` → Muestra este mensaje.
 `;
     await ctx.reply(helpText, { parse_mode: "Markdown" });
 });
 exports.bot.command("vincular", handlers_js_1.handleVincular);
+exports.bot.command("reporte", handlers_js_1.handleReporte);
 // Main message handler
 exports.bot.on("message:text", handlers_js_1.handleMessage);
 // Catch errors

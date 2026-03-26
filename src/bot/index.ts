@@ -1,7 +1,7 @@
 import { Bot } from "grammy";
 import { config } from "../config.js";
 import { authMiddleware } from "./auth.js";
-import { handleMessage, handleVincular } from "./handlers.js";
+import { handleMessage, handleVincular, handleReporte } from "./handlers.js";
 
 export const bot = new Bot(config.TELEGRAM_BOT_TOKEN);
 
@@ -17,12 +17,14 @@ bot.command("help", async (ctx) => {
     const helpText = `
 🤖 **Comandos disponibles:**
 - \`/vincular Tu Nombre\` → Te conecta con tu perfil en AppSheet (ej. \`/vincular Juan Perez\`)
+- \`/reporte\` → Genera el resumen diario de Piping ahora mismo.
 - \`/help\` → Muestra este mensaje.
 `;
     await ctx.reply(helpText, { parse_mode: "Markdown" });
 });
 
 bot.command("vincular", handleVincular);
+bot.command("reporte", handleReporte);
 
 // Main message handler
 bot.on("message:text", handleMessage);

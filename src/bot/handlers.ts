@@ -1,5 +1,6 @@
 import { Context } from "grammy";
 import { findAppsheetUser, updateAppsheetTelegramId } from "../agent/appsheet.js";
+import { generatePipingReportMessage } from "../scheduler/pipingReport.js";
 
 export const handleMessage = async (ctx: Context) => {
     // El usuario no quiere que el bot responda a preguntas.
@@ -69,5 +70,25 @@ export const handleVincular = async (ctx: Context) => {
     } catch (error: any) {
         console.error("Error en handleVincular:", error);
         await ctx.reply("❌ Error inesperado al conectar con LukeAPP.");
+    }
+};
+
+export const handleReporte = async (ctx: Context) => {
+    try {
+        const chatId = ctx.from?.id.toString();
+        if (!chatId) return;
+
+        console.log(`[Bot] Usuario ${chatId} solicitó reporte manual.`);
+        await ctx.reply("📊 Generando reporte del día, por favor espera...", { parse_mode: "Markdown" });
+
+        const message = await generatePipingReportMessage();
+        await ctx.reply(message, {
+            parse_mode: 'Markdown',
+            link_preview_options: { is_disabled: true }
+        });
+
+    } catch (error: any) {
+        console.error("Error en handleReporte:", error);
+        await ctx.reply("❌ Error al generar el reporte. Por favor intenta más tarde.");
     }
 };

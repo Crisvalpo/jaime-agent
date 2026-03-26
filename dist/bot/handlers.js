@@ -1,7 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.handleVincular = exports.handleMessage = void 0;
+exports.handleReporte = exports.handleVincular = exports.handleMessage = void 0;
 const appsheet_js_1 = require("../agent/appsheet.js");
+const pipingReport_js_1 = require("../scheduler/pipingReport.js");
 const handleMessage = async (ctx) => {
     // El usuario no quiere que el bot responda a preguntas.
     // Solo permitimos el comando /vincular.
@@ -65,3 +66,22 @@ const handleVincular = async (ctx) => {
     }
 };
 exports.handleVincular = handleVincular;
+const handleReporte = async (ctx) => {
+    try {
+        const chatId = ctx.from?.id.toString();
+        if (!chatId)
+            return;
+        console.log(`[Bot] Usuario ${chatId} solicitó reporte manual.`);
+        await ctx.reply("📊 Generando reporte del día, por favor espera...", { parse_mode: "Markdown" });
+        const message = await (0, pipingReport_js_1.generatePipingReportMessage)();
+        await ctx.reply(message, {
+            parse_mode: 'Markdown',
+            link_preview_options: { is_disabled: true }
+        });
+    }
+    catch (error) {
+        console.error("Error en handleReporte:", error);
+        await ctx.reply("❌ Error al generar el reporte. Por favor intenta más tarde.");
+    }
+};
+exports.handleReporte = handleReporte;
