@@ -113,13 +113,21 @@ const getNotificationRecipients = async (notificationType) => {
         if (!configRes.ok)
             return [];
         const configData = await configRes.json();
-        // Obtenemos todos los roles habilitados (soportando si Rol es una lista separada por comas)
+        // Helper: AppSheet EnumList puede llegar como array ["OT","ADMIN"] o como string "OT, ADMIN"
+        const toRoleArray = (rol) => {
+            if (!rol)
+                return [];
+            if (Array.isArray(rol))
+                return rol.map((r) => r.trim().toLowerCase());
+            return String(rol).split(",").map((r) => r.trim().toLowerCase()).filter(Boolean);
+        };
+        // Obtenemos todos los roles habilitados para este tipo de notificación
         const activeRolesSet = new Set();
         configData
             .filter((c) => c.ID_NOTIFICACIONES === notificationType && (c.ACTIVO === "true" || c.ACTIVO === true || c.ACTIVO === "Y" || c.ACTIVO === "VERDADERO"))
             .forEach((c) => {
             if (c.ROL) {
-                c.ROL.split(",").forEach((r) => activeRolesSet.add(r.trim().toLowerCase()));
+                toRoleArray(c.ROL).forEach((r) => activeRolesSet.add(r));
             }
         });
         if (activeRolesSet.size === 0)
@@ -145,8 +153,8 @@ const getNotificationRecipients = async (notificationType) => {
             .filter((u) => {
             if (!u.TELEGRAM_ID || !u.ROL)
                 return false;
-            // Soportamos si el usuario tiene múltiples roles asignados (EnumList)
-            const userRoles = u.ROL.split(",").map((r) => r.trim().toLowerCase());
+            // Soportamos EnumList (array o string)
+            const userRoles = toRoleArray(u.ROL);
             return userRoles.some((role) => activeRolesSet.has(role));
         })
             .map((u) => u.TELEGRAM_ID);
