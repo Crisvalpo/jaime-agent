@@ -46,13 +46,14 @@ export const generatePipingReportMessage = async () => {
     const m = String(today.getMonth() + 1).padStart(2, '0');
     const y = today.getFullYear();
     const strHoySlash = `${d}/${m}/${y}`;
+    const strHoyUSSlash = `${m}/${d}/${y}`; // AppSheet API envía MM/DD/YYYY internamente
     const strHoyDash = `${d}-${m}-${y}`;
     const rawHoy = today.toISOString().split('T')[0];
 
     // Helper: Validar si la fecha del registro corresponde al día de hoy
     const isToday = (dateStr: any) => {
         if (!dateStr || typeof dateStr !== 'string') return false;
-        return dateStr.includes(strHoySlash) || dateStr.includes(strHoyDash) || dateStr.includes(rawHoy);
+        return dateStr.includes(strHoySlash) || dateStr.includes(strHoyUSSlash) || dateStr.includes(strHoyDash) || dateStr.includes(rawHoy);
     };
 
     // 3. Obtener Data
