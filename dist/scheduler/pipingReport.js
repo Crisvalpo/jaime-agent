@@ -38,9 +38,20 @@ async function fetchAppSheetTable(tableName) {
  * Genera el cuerpo del mensaje para el reporte diario de Piping
  */
 const generatePipingReportMessage = async () => {
-    // 2. Definir "hoy" en formato DD/MM/AAAA para cruzar con AppSheet
+    // 2. Definir variables para los distintos formatos de "hoy" (DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD)
     const today = new Date();
-    const strHoy = today.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const d = String(today.getDate()).padStart(2, '0');
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    const y = today.getFullYear();
+    const strHoySlash = `${d}/${m}/${y}`;
+    const strHoyDash = `${d}-${m}-${y}`;
+    const rawHoy = today.toISOString().split('T')[0];
+    // Helper: Validar si la fecha del registro corresponde al día de hoy
+    const isToday = (dateStr) => {
+        if (!dateStr || typeof dateStr !== 'string')
+            return false;
+        return dateStr.includes(strHoySlash) || dateStr.includes(strHoyDash) || dateStr.includes(rawHoy);
+    };
     // 3. Obtener Data
     const [ejecuciones, inspecciones, spools] = await Promise.all([
         fetchAppSheetTable('REG_EjecucionJuntas_MS'),
@@ -48,16 +59,8 @@ const generatePipingReportMessage = async () => {
         fetchAppSheetTable('LIST_Spools_MS')
     ]);
     // 4. Filtrar y procesar datos del día
-    const ejecutadasHoy = ejecuciones.filter((e) => {
-        if (!e.FECHA_EJECUCION || !e.FECHA_EJECUCION.includes)
-            return false;
-        return e.FECHA_EJECUCION.includes(strHoy) || e.FECHA_EJECUCION.split('T')[0] === today.toISOString().split('T')[0];
-    });
-    const vtsHoy = inspecciones.filter((i) => {
-        if (!i.FECHA_INSPECCION || !i.FECHA_INSPECCION.includes)
-            return false;
-        return i.FECHA_INSPECCION.includes(strHoy) || i.FECHA_INSPECCION.split('T')[0] === today.toISOString().split('T')[0];
-    });
+    const ejecutadasHoy = ejecuciones.filter((e) => isToday(e.FECHA_EJECUCION));
+    const vtsHoy = inspecciones.filter((i) => isToday(i.FECHA_INSPECCION));
     // Contadores Juntas
     let cortadas = 0, emplantilladas = 0, soldadas = 0;
     ejecutadasHoy.forEach((e) => {
@@ -70,21 +73,13 @@ const generatePipingReportMessage = async () => {
             soldadas++;
     });
     // Contadores Spools del día (avances de etapa)
-    const spoolsHoy = spools.filter((s) => {
-        const fFab = s.FECHA_INICIO_FAB || '';
-        const fPint = s.FECHA_INICIO_PINT || '';
-        const fDesp = s.FECHA_DESPACHO || '';
-        const rawHoy = today.toISOString().split('T')[0];
-        return fFab.includes(strHoy) || fFab.includes(rawHoy) ||
-            fPint.includes(strHoy) || fPint.includes(rawHoy) ||
-            fDesp.includes(strHoy) || fDesp.includes(rawHoy);
-    }).length;
+    const spoolsHoy = spools.filter((s) => isToday(s.FECHA_INICIO_FAB) || isToday(s.FECHA_INICIO_PINT) || isToday(s.FECHA_DESPACHO)).length;
     // VT Aprobados
     const vtAprobadosHoy = vtsHoy.filter((i) => (i.ESTADO || '').trim().toUpperCase() === 'APROBADO').length;
     // 5. Formatear mensaje
     const weekStr = `S${getProjectWeek()}`;
     return `📊 *Andina PRY-413 | Resumen ${weekStr}*\n` +
-        `📅 Fecha: ${strHoy}\n` +
+        `📅 Fecha: ${strHoySlash}\n` +
         `━━━━━━━━━━━━━━━━━━━━\n` +
         `🔗 *Juntas procesadas hoy:*\n` +
         `  • Corte: ${cortadas}\n` +

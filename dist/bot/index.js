@@ -15,7 +15,7 @@ exports.bot.command("start", async (ctx) => {
 exports.bot.command("help", async (ctx) => {
     const helpText = `
 🤖 **Comandos disponibles:**
-- \`/vincular Tu Nombre\` → Te conecta con tu perfil en AppSheet (ej. \`/vincular Juan Perez\`)
+- \`/vincular Tu Nombre\` → Te conecta con tu perfil en LukeAPP (ej. \`/vincular Juan Perez\`)
 - \`/reporte\` → Genera el resumen diario de Piping ahora mismo.
 - \`/help\` → Muestra este mensaje.
 `;
