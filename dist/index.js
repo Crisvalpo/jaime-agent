@@ -33,13 +33,13 @@ const bootstrap = async () => {
         });
         // 4. Iniciar Programaciones (Cron Jobs) — ANTES del await para que no se bloquee
         // Ejecutar de Lunes a Viernes a las 19:00 hrs
-        node_cron_1.default.schedule("0 19 * * 1-5", () => {
-            console.log("⏰ Ejecutando cron job: PIPING_REPORTE_DIARIO (19:00)");
+        node_cron_1.default.schedule("30 19 * * 1-5", () => {
+            console.log("⏰ Ejecutando cron job: PIPING_REPORTE_DIARIO (19:30)");
             (0, pipingReport_js_1.runDailyPipingReport)();
         }, {
             timezone: "America/Santiago"
         });
-        console.log("⏰ Cron Jobs programados: PIPING_REPORTE_DIARIO (19:00 L-V America/Santiago)");
+        console.log("⏰ Cron Jobs programados: PIPING_REPORTE_DIARIO (19:30 L-V America/Santiago)");
         console.log("----------------------------------------");
         console.log("✨ ¡jAIme está corriendo y listo!");
         console.log("----------------------------------------");
