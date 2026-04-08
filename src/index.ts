@@ -34,9 +34,7 @@ const bootstrap = async () => {
             console.log(`🏠 Health check disponible en: http://localhost:${PORT}/health`);
         });
 
-        await botPromise;
-
-        // 4. Iniciar Programaciones (Cron Jobs)
+        // 4. Iniciar Programaciones (Cron Jobs) — ANTES del await para que no se bloquee
         // Ejecutar de Lunes a Viernes a las 19:00 hrs
         cron.schedule("0 19 * * 1-5", () => {
             console.log("⏰ Ejecutando cron job: PIPING_REPORTE_DIARIO (19:00)");
@@ -44,11 +42,14 @@ const bootstrap = async () => {
         }, {
             timezone: "America/Santiago"
         });
-        console.log("⏰ Cron Jobs programados: PIPING_REPORTE_DIARIO (19:00 L-V)");
+        console.log("⏰ Cron Jobs programados: PIPING_REPORTE_DIARIO (19:00 L-V America/Santiago)");
 
         console.log("----------------------------------------");
         console.log("✨ ¡jAIme está corriendo y listo!");
         console.log("----------------------------------------");
+
+        // bot.start() bloquea indefinidamente — debe ser lo último
+        await botPromise;
 
     } catch (error) {
         console.error("🔥 Error fatal durante la inicialización:", error);
