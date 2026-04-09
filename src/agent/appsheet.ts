@@ -198,6 +198,29 @@ export interface JuntaStatus {
     INSPECTOR_VT?: string;
 }
 
+// Global helper para resolver la jerarquía del estado de ejecución
+export const resolveExecutionStatus = (ejecuciones: any[]) => {
+    if (!ejecuciones || ejecuciones.length === 0) return null;
+
+    const hierarchy = ['EJECUTADA', 'EMPLANTILLADO', 'CORTE DIMENSIONADO'];
+
+    // Hacemos una copia y ordenamos con base al rango (limpiando espacios/mayúsculas)
+    const sorted = [...ejecuciones].sort((a: any, b: any) => {
+        const estadoA = (a.ESTADO_EJECUCION || '').trim().toUpperCase();
+        const estadoB = (b.ESTADO_EJECUCION || '').trim().toUpperCase();
+
+        let rankA = hierarchy.indexOf(estadoA);
+        let rankB = hierarchy.indexOf(estadoB);
+
+        if (rankA === -1) rankA = 99;
+        if (rankB === -1) rankB = 99;
+
+        return rankA - rankB; // El menor rank queda primero
+    });
+
+    return sorted[0];
+};
+
 // Global helper para hacer fetch a la API de AppSheet de forma más limpia
 const fetchAppSheetTable = async (tableName: string) => {
     const url = `https://api.appsheet.com/api/v2/apps/${config.APPSHEET_APP_ID}/tables/${tableName}/Action`;
@@ -256,18 +279,7 @@ export const getJuntaStatus = async (searchQuery: string): Promise<JuntaStatus[]
         // 4. Cruzar la información
         return masterMatches.map((master: any) => {
             const allEjecuciones = ejecuciones.filter((e: any) => e.ID_JUNTA === master.ID_JUNTA);
-
-            let ejecucion = null;
-            if (allEjecuciones.length > 0) {
-                const hierarchy = ['EJECUTADA', 'EMPLANTILLADO', 'CORTE DIMENSIONADO'];
-                ejecucion = allEjecuciones.sort((a: any, b: any) => {
-                    let rankA = hierarchy.indexOf(a.ESTADO_EJECUCION);
-                    let rankB = hierarchy.indexOf(b.ESTADO_EJECUCION);
-                    if (rankA === -1) rankA = 99;
-                    if (rankB === -1) rankB = 99;
-                    return rankA - rankB; // El menor rank queda primero
-                })[0];
-            }
+            const ejecucion = resolveExecutionStatus(allEjecuciones);
 
             const vt = inspecciones.find((v: any) => v.ID_JUNTA === master.ID_JUNTA);
 
@@ -334,7 +346,11 @@ export const getSpoolStatus = async (searchQuery: string): Promise<SpoolStatus[]
         }
 
         // 2. Extraer los spools y traer sus juntas hijas desde LIST_Juntas_MS
-        const listJuntas = await fetchAppSheetTable("LIST_Juntas_MS");
+        // Y traer registros de ejecucion para sus Juntas
+        const [listJuntas, ejecuciones] = await Promise.all([
+            fetchAppSheetTable("LIST_Juntas_MS"),
+            fetchAppSheetTable("REG_EjecucionJuntas_MS")
+        ]);
 
         return masterMatches.map((master: any) => {
             const childJuntas = listJuntas.filter((j: any) => j.ID_SPOOL === master.ID_SPOOL);
@@ -344,10 +360,24 @@ export const getSpoolStatus = async (searchQuery: string): Promise<SpoolStatus[]
                 ID_ISO: master.ID_ISO,
                 ESTADO: master.ESTADO_FABRICACION || master.ESTADO || 'NO DEFINIDO', // Podría ser ESTADO_FABRICACION
                 TOTAL_JUNTAS: childJuntas.length,
-                JUNTAS: childJuntas.map((cj: any) => ({
-                    ID_JUNTA: cj.ID_JUNTA,
-                    ESTADO: cj.ESTADO || 'N/A' // Estado según la lista maestra
-                }))
+                JUNTAS: childJuntas.map((cj: any) => {
+                    // Extraer los registros de ejecución de esta junta específica
+                    const allExecs = ejecuciones.filter((e: any) => e.ID_JUNTA === cj.ID_JUNTA);
+                    const bestExec = resolveExecutionStatus(allExecs);
+
+                    let finalEstado = 'PENDIENTE';
+                    if (bestExec && bestExec.ESTADO_EJECUCION) {
+                        finalEstado = bestExec.ESTADO_EJECUCION.trim().toUpperCase();
+                    } else if (cj.ESTADO) {
+                        // Respaldo por si hay fallback directo
+                        finalEstado = cj.ESTADO;
+                    }
+
+                    return {
+                        ID_JUNTA: cj.ID_JUNTA,
+                        ESTADO: finalEstado
+                    };
+                })
             };
         });
 
