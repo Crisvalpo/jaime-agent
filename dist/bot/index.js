@@ -17,12 +17,15 @@ exports.bot.command("help", async (ctx) => {
 🤖 **Comandos disponibles:**
 - \`/vincular Tu Nombre\` → Te conecta con tu perfil en LukeAPP (ej. \`/vincular Juan Perez\`)
 - \`/reporte\` → Genera el resumen diario de Piping ahora mismo.
+- \`/uniones [tag]\` (o \`/junta\`) → Consulta el estado de una unión térmica (Requiere perfil).
 - \`/help\` → Muestra este mensaje.
 `;
     await ctx.reply(helpText, { parse_mode: "Markdown" });
 });
 exports.bot.command("vincular", handlers_js_1.handleVincular);
 exports.bot.command("reporte", handlers_js_1.handleReporte);
+exports.bot.command("uniones", handlers_js_1.handleUniones);
+exports.bot.command("junta", handlers_js_1.handleUniones);
 // Main message handler
 exports.bot.on("message:text", handlers_js_1.handleMessage);
 // Catch errors

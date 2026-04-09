@@ -173,3 +173,115 @@ export const getNotificationRecipients = async (notificationType: string): Promi
         return [];
     }
 };
+
+/**
+ * PHASE 2: Consulta de estado de Junta/Unión
+ */
+export interface JuntaStatus {
+    ID_JUNTA: string;
+    ESTADO_MUESTRA?: string;      // Nuevo: desde LIST_Juntas_MS (si está fit-up, etc)
+    ID_TIPO_UNION?: string;       // Nuevo
+    ID_ISO?: string;
+    ID_LINEA?: string;
+    ID_SPOOL?: string;
+
+    // Ejecución
+    ESTADO_EJECUCION: string;
+    FECHA_EJECUCION?: string;
+    RESPONSABLE?: string;
+    ESTAMPA_EJECUTOR?: string;
+    PROCESO_SOLDADURA?: string;
+
+    // VT
+    ESTADO_VT?: string;
+    FECHA_VT?: string;
+    INSPECTOR_VT?: string;
+}
+
+// Global helper para hacer fetch a la API de AppSheet de forma más limpia
+const fetchAppSheetTable = async (tableName: string) => {
+    const url = `https://api.appsheet.com/api/v2/apps/${config.APPSHEET_APP_ID}/tables/${tableName}/Action`;
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'ApplicationAccessKey': config.APPSHEET_ACCESS_KEY,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            Action: "Find",
+            Properties: { Locale: "es-ES" },
+            Rows: []
+        })
+    });
+    if (!response.ok) {
+        console.error(`[AppSheet] Error al consultar tabla ${tableName}: HTTP ${response.status}`);
+        return [];
+    }
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+};
+
+export const getJuntaStatus = async (searchQuery: string): Promise<JuntaStatus[]> => {
+    try {
+        const upperQuery = searchQuery.trim().toUpperCase();
+
+        // 1. Consultar la tabla maestra `LIST_Juntas_MS`
+        const listJuntas = await fetchAppSheetTable("LIST_Juntas_MS");
+        const masterMatches = listJuntas.filter((j: any) => j.ID_JUNTA && j.ID_JUNTA.toUpperCase().includes(upperQuery));
+
+        if (masterMatches.length === 0) return [];
+
+        // Por rendimiento, si hay más de 5 coincidencias, no consultamos las demás tablas
+        // para evitar cruzar demasiados datos en memoria innecesariamente.
+        if (masterMatches.length > 5) {
+            // El handler cortará la respuesta, no pasa nada
+            return masterMatches.map((m: any) => ({
+                ID_JUNTA: m.ID_JUNTA,
+                ESTADO_EJECUCION: 'NO REVISADO',
+                ID_ISO: m.ID_ISO,
+                ID_LINEA: m.ID_LINEA,
+                ID_SPOOL: m.ID_SPOOL
+            }));
+        }
+
+        // 2. Extraer los IDs exactos de los matches
+        const ids = masterMatches.map((m: any) => m.ID_JUNTA);
+
+        // 3. Consultar tablas de registros
+        const [ejecuciones, inspecciones] = await Promise.all([
+            fetchAppSheetTable("REG_EjecucionJuntas_MS"),
+            fetchAppSheetTable("REG_InspeccionVisual_MS")
+        ]);
+
+        // 4. Cruzar la información
+        return masterMatches.map((master: any) => {
+            const ejecucion = ejecuciones.find((e: any) => e.ID_JUNTA === master.ID_JUNTA);
+            const vt = inspecciones.find((v: any) => v.ID_JUNTA === master.ID_JUNTA);
+
+            return {
+                ID_JUNTA: master.ID_JUNTA,
+                ESTADO_MUESTRA: master.ESTADO, // El estado que tenga en la lista maestra
+                ID_TIPO_UNION: master.ID_TIPO_UNION,
+                ID_ISO: master.ID_ISO,
+                ID_LINEA: master.ID_LINEA,
+                ID_SPOOL: master.ID_SPOOL,
+
+                // Datos de Ejecución
+                ESTADO_EJECUCION: ejecucion ? (ejecucion.ESTADO_EJECUCION || 'REPORTADO') : 'PENDIENTE',
+                FECHA_EJECUCION: ejecucion?.FECHA_EJECUCION,
+                RESPONSABLE: ejecucion?.RESPONSABLE,
+                ESTAMPA_EJECUTOR: ejecucion?.ESTAMPA_EJECUTOR,
+                PROCESO_SOLDADURA: ejecucion?.PROCESO_SOLDADURA,
+
+                // Datos de VT
+                ESTADO_VT: vt?.ESTADO,
+                FECHA_VT: vt?.FECHA_INSPECCION,
+                INSPECTOR_VT: vt?.INSPECTOR
+            };
+        });
+
+    } catch (err) {
+        console.error('[AppSheet] Error en getJuntaStatus:', err);
+        return [];
+    }
+};

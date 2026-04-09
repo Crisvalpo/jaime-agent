@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.handleReporte = exports.handleVincular = exports.handleMessage = void 0;
+exports.handleUniones = exports.handleReporte = exports.handleVincular = exports.handleMessage = void 0;
 const appsheet_js_1 = require("../agent/appsheet.js");
 const pipingReport_js_1 = require("../scheduler/pipingReport.js");
 const userContext_js_1 = require("./userContext.js");
@@ -99,3 +99,64 @@ const handleReporte = async (ctx) => {
     }
 };
 exports.handleReporte = handleReporte;
+const handleUniones = async (ctx) => {
+    const userText = ctx.message?.text || "";
+    const telegramId = ctx.from?.id.toString();
+    if (!telegramId)
+        return;
+    // Verificar perfil del usuario
+    const profile = await (0, userContext_js_1.getUserProfile)(telegramId);
+    if (!profile) {
+        await ctx.reply("🚫 No estás vinculado. Usa `/vincular Tu Nombre` para acceder a este comando.");
+        return;
+    }
+    // Validar Rol (Solo lectura no puede)
+    const roles = profile.ROL.toLowerCase();
+    if (roles.includes("solo lectura") && !roles.includes("admin") && !roles.includes("qaqc") && !roles.includes("supervisor")) {
+        await ctx.reply("⛔ No tienes permisos para consultar uniones térmicas. Requiere nivel Supervisor o superior.");
+        return;
+    }
+    const query = userText.split(" ").slice(1).join(" ").trim();
+    if (!query) {
+        await ctx.reply("❌ Formato incorrecto.\n\nEjemplo de uso:\n`/uniones SP05_16` o `/junta 03351...SP05_16`", { parse_mode: "Markdown" });
+        return;
+    }
+    await ctx.reply(`🔍 Buscando uniones que coincidan con \`${query}\`...`, { parse_mode: "Markdown" });
+    const juntas = await (0, appsheet_js_1.getJuntaStatus)(query);
+    if (juntas.length === 0) {
+        await ctx.reply(`🚫 No se encontraron uniones para el término: \`${query}\`.\nRevisa el identificador y prueba nuevamente.`, { parse_mode: "Markdown" });
+        return;
+    }
+    // Si hay más de 5, pedir al usuario que sea más específico
+    if (juntas.length > 5) {
+        await ctx.reply(`⚠️ Se encontraron demasiadas coincidencias (${juntas.length}). Por favor sé más específico con el tag de la junta (ej. agregando el prefijo de hoja o spool).`);
+        return;
+    }
+    for (const j of juntas) {
+        let msg = `🔗 **Junta:** \`${j.ID_JUNTA}\`\n`;
+        msg += `> 📍 **Isométrico:** \`${j.ID_ISO || 'N/A'}\`\n`;
+        msg += `> 🛠️ **Spool:** \`${j.ID_SPOOL || 'N/A'}\`\n\n`;
+        msg += `📋 **Req. Muestra (Maestra):** ${j.ESTADO_MUESTRA || 'N/A'}\n`;
+        msg += `🔥 **Soldadura:** ${j.ESTADO_EJECUCION}\n`;
+        if (j.FECHA_EJECUCION)
+            msg += `   └ Fecha: ${j.FECHA_EJECUCION}\n`;
+        if (j.PROCESO_SOLDADURA)
+            msg += `   └ Proceso: ${j.PROCESO_SOLDADURA}\n`;
+        if (j.ESTAMPA_EJECUTOR)
+            msg += `   └ Soldador: ${j.ESTAMPA_EJECUTOR} (${j.RESPONSABLE || 'N/A'})\n`;
+        if (j.ESTADO_VT) {
+            msg += `\n👁️ **Inspección VT:** ${j.ESTADO_VT}\n`;
+            if (j.FECHA_VT)
+                msg += `   └ Fecha: ${j.FECHA_VT}\n`;
+            if (j.INSPECTOR_VT)
+                msg += `   └ Inspector: ${j.INSPECTOR_VT}\n`;
+        }
+        else {
+            if (j.ESTADO_EJECUCION === 'EJECUTADA') {
+                msg += `\n👁️ **Inspección VT:** PENDIENTE\n`;
+            }
+        }
+        await ctx.reply(msg, { parse_mode: "Markdown" });
+    }
+};
+exports.handleUniones = handleUniones;
