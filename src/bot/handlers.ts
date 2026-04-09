@@ -1,14 +1,32 @@
 import { Context } from "grammy";
 import { findAppsheetUser, updateAppsheetTelegramId } from "../agent/appsheet.js";
 import { generatePipingReportMessage } from "../scheduler/pipingReport.js";
+import { getUserProfile, clearUserCache } from "./userContext.js";
 
 export const handleMessage = async (ctx: Context) => {
-    // El usuario no quiere que el bot responda a preguntas.
-    // Solo permitimos el comando /vincular.
     const userText = ctx.message?.text || "";
-    if (userText.startsWith("/")) return; // Dejar que los comandos se manejen por separado
+    if (userText.startsWith("/")) return;
 
-    await ctx.reply("🤖 Soy **jAIme v4.0** y solo estoy configurado para enviar notificaciones oficiales de **LukeAPP**.", { parse_mode: "Markdown" });
+    const telegramId = ctx.from?.id.toString();
+    if (!telegramId) return;
+
+    // Buscar perfil del usuario en cache o AppSheet
+    const profile = await getUserProfile(telegramId);
+
+    if (profile) {
+        // Usuario vinculado — saludo personalizado
+        const firstName = profile.USUARIO.split(' ')[0];
+        await ctx.reply(
+            `👋 ¡Hola **${firstName}**!\nRol: ${profile.ROL} | Proyecto Andina PRY-413\n\n¿Qué necesitas?\n  📊 /reporte \u2192 Resumen del día\n  ❓ /help \u2192 Todos los comandos`,
+            { parse_mode: "Markdown" }
+        );
+    } else {
+        // Usuario no vinculado
+        await ctx.reply(
+            "🤖 Soy **jAIme** y anún no conozco tu perfil.\n\nUsa `/vincular Tu Nombre` para registrarte y recibir notificaciones personalizadas.",
+            { parse_mode: "Markdown" }
+        );
+    }
 };
 
 export const handleVincular = async (ctx: Context) => {
@@ -63,6 +81,8 @@ export const handleVincular = async (ctx: Context) => {
 
         if (success) {
             console.log(`[Bot] Vinculación exitosa para usuario: ${usuario} (${telegramId})`);
+            // Limpiar cache para que recargue el perfil actualizado
+            clearUserCache(telegramId);
             await ctx.reply(`✅ ¡Vinculación exitosa!\n\nUsuario: ${user.USUARIO}\nPerfil: ${user.ROL}\nAhora recibirás notificaciones de acuerdo a tu perfil.`);
         } else {
             await ctx.reply("❌ Error al actualizar LukeAPP. Verifica que la columna `TELEGRAM_ID` sea editable por la API.");

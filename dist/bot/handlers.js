@@ -3,13 +3,25 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.handleReporte = exports.handleVincular = exports.handleMessage = void 0;
 const appsheet_js_1 = require("../agent/appsheet.js");
 const pipingReport_js_1 = require("../scheduler/pipingReport.js");
+const userContext_js_1 = require("./userContext.js");
 const handleMessage = async (ctx) => {
-    // El usuario no quiere que el bot responda a preguntas.
-    // Solo permitimos el comando /vincular.
     const userText = ctx.message?.text || "";
     if (userText.startsWith("/"))
-        return; // Dejar que los comandos se manejen por separado
-    await ctx.reply("🤖 Soy **jAIme v4.0** y solo estoy configurado para enviar notificaciones oficiales de **LukeAPP**.", { parse_mode: "Markdown" });
+        return;
+    const telegramId = ctx.from?.id.toString();
+    if (!telegramId)
+        return;
+    // Buscar perfil del usuario en cache o AppSheet
+    const profile = await (0, userContext_js_1.getUserProfile)(telegramId);
+    if (profile) {
+        // Usuario vinculado — saludo personalizado
+        const firstName = profile.USUARIO.split(' ')[0];
+        await ctx.reply(`👋 ¡Hola **${firstName}**!\nRol: ${profile.ROL} | Proyecto Andina PRY-413\n\n¿Qué necesitas?\n  📊 /reporte \u2192 Resumen del día\n  ❓ /help \u2192 Todos los comandos`, { parse_mode: "Markdown" });
+    }
+    else {
+        // Usuario no vinculado
+        await ctx.reply("🤖 Soy **jAIme** y anún no conozco tu perfil.\n\nUsa `/vincular Tu Nombre` para registrarte y recibir notificaciones personalizadas.", { parse_mode: "Markdown" });
+    }
 };
 exports.handleMessage = handleMessage;
 const handleVincular = async (ctx) => {
@@ -54,6 +66,8 @@ const handleVincular = async (ctx) => {
         const success = await (0, appsheet_js_1.updateAppsheetTelegramId)(user.USUARIO, telegramId);
         if (success) {
             console.log(`[Bot] Vinculación exitosa para usuario: ${usuario} (${telegramId})`);
+            // Limpiar cache para que recargue el perfil actualizado
+            (0, userContext_js_1.clearUserCache)(telegramId);
             await ctx.reply(`✅ ¡Vinculación exitosa!\n\nUsuario: ${user.USUARIO}\nPerfil: ${user.ROL}\nAhora recibirás notificaciones de acuerdo a tu perfil.`);
         }
         else {
