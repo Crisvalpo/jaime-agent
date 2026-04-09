@@ -226,6 +226,9 @@ export const handleSpool = async (ctx: Context) => {
 
         for (const s of spools) {
             let msg = `🛠️ **Spool:** \`${s.ID_SPOOL}\`\n`;
+            if (s.TAG_SPOOL) {
+                msg += `> 🏷️ **Tag:** \`${s.TAG_SPOOL}\`\n`;
+            }
             msg += `> 📍 **Isométrico:** \`${s.ID_ISO || 'N/A'}\`\n\n`;
 
             msg += `**Estado Fabricación:** ${s.ESTADO || 'NO DEFINIDO'}\n`;

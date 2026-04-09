@@ -316,6 +316,7 @@ export const getJuntaStatus = async (searchQuery: string): Promise<JuntaStatus[]
  */
 export interface SpoolStatus {
     ID_SPOOL: string;
+    TAG_SPOOL?: string;
     ID_ISO?: string;
     ESTADO?: string;
     TOTAL_JUNTAS: number;
@@ -331,13 +332,18 @@ export const getSpoolStatus = async (searchQuery: string): Promise<SpoolStatus[]
 
         // 1. Consultar la tabla maestra `LIST_Spools_MS`
         const listSpools = await fetchAppSheetTable("LIST_Spools_MS");
-        const masterMatches = listSpools.filter((s: any) => s.ID_SPOOL && s.ID_SPOOL.toUpperCase().includes(upperQuery));
+        const masterMatches = listSpools.filter((s: any) => {
+            const matchId = s.ID_SPOOL && s.ID_SPOOL.toUpperCase().includes(upperQuery);
+            const matchTag = s.TAG_SPOOL && String(s.TAG_SPOOL).toUpperCase().includes(upperQuery);
+            return matchId || matchTag;
+        });
 
         if (masterMatches.length === 0) return [];
 
         if (masterMatches.length > 5) {
             return masterMatches.map((m: any) => ({
                 ID_SPOOL: m.ID_SPOOL,
+                TAG_SPOOL: m.TAG_SPOOL,
                 ID_ISO: m.ID_ISO,
                 ESTADO: 'NO REVISADO',
                 TOTAL_JUNTAS: 0,
@@ -357,6 +363,7 @@ export const getSpoolStatus = async (searchQuery: string): Promise<SpoolStatus[]
 
             return {
                 ID_SPOOL: master.ID_SPOOL,
+                TAG_SPOOL: master.TAG_SPOOL,
                 ID_ISO: master.ID_ISO,
                 ESTADO: master.ESTADO_FABRICACION || master.ESTADO || 'NO DEFINIDO', // Podría ser ESTADO_FABRICACION
                 TOTAL_JUNTAS: childJuntas.length,
