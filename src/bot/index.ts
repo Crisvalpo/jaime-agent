@@ -1,7 +1,7 @@
 import { Bot } from "grammy";
 import { config } from "../config.js";
 import { authMiddleware } from "./auth.js";
-import { handleMessage, handleVincular, handleReporte } from "./handlers.js";
+import { handleMessage, handleVincular, handleReporte, handleUniones } from "./handlers.js";
 
 export const bot = new Bot(config.TELEGRAM_BOT_TOKEN);
 
@@ -18,6 +18,7 @@ bot.command("help", async (ctx) => {
 🤖 **Comandos disponibles:**
 - \`/vincular Tu Nombre\` → Te conecta con tu perfil en LukeAPP (ej. \`/vincular Juan Perez\`)
 - \`/reporte\` → Genera el resumen diario de Piping ahora mismo.
+- \`/uniones [tag]\` (o \`/junta\`) → Consulta el estado de una unión térmica (Requiere perfil).
 - \`/help\` → Muestra este mensaje.
 `;
     await ctx.reply(helpText, { parse_mode: "Markdown" });
@@ -25,6 +26,9 @@ bot.command("help", async (ctx) => {
 
 bot.command("vincular", handleVincular);
 bot.command("reporte", handleReporte);
+bot.command("uniones", handleUniones);
+bot.command("union", handleUniones);
+bot.command("junta", handleUniones);
 
 // Main message handler
 bot.on("message:text", handleMessage);

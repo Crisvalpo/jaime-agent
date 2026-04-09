@@ -25,6 +25,7 @@ exports.bot.command("help", async (ctx) => {
 exports.bot.command("vincular", handlers_js_1.handleVincular);
 exports.bot.command("reporte", handlers_js_1.handleReporte);
 exports.bot.command("uniones", handlers_js_1.handleUniones);
+exports.bot.command("union", handlers_js_1.handleUniones);
 exports.bot.command("junta", handlers_js_1.handleUniones);
 // Main message handler
 exports.bot.on("message:text", handlers_js_1.handleMessage);
