@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.handleUniones = exports.handleReporte = exports.handleVincular = exports.handleMessage = void 0;
+exports.handleSpool = exports.handleUniones = exports.handleReporte = exports.handleVincular = exports.handleMessage = void 0;
 const appsheet_js_1 = require("../agent/appsheet.js");
 const pipingReport_js_1 = require("../scheduler/pipingReport.js");
 const userContext_js_1 = require("./userContext.js");
@@ -156,7 +156,74 @@ const handleUniones = async (ctx) => {
                 msg += `\n👁️ **Inspección VT:** PENDIENTE\n`;
             }
         }
-        await ctx.reply(msg, { parse_mode: "Markdown" });
+        try {
+            await ctx.reply(msg, { parse_mode: "Markdown" });
+        }
+        catch (mdError) {
+            console.error("Markdown parse failed in handleUniones, falling back to plain text:", mdError);
+            await ctx.reply(msg.replace(/[`*]/g, ''));
+        }
     }
 };
 exports.handleUniones = handleUniones;
+const handleSpool = async (ctx) => {
+    try {
+        const userText = ctx.message?.text || "";
+        const telegramId = ctx.from?.id.toString();
+        if (!telegramId)
+            return;
+        // Verificar perfil del usuario
+        const profile = await (0, userContext_js_1.getUserProfile)(telegramId);
+        if (!profile) {
+            await ctx.reply("🚫 No estás vinculado. Usa `/vincular Tu Nombre`.");
+            return;
+        }
+        // Validar Rol
+        const roles = profile.ROL.toLowerCase();
+        if (roles.includes("solo lectura") && !roles.includes("admin") && !roles.includes("qaqc") && !roles.includes("supervisor")) {
+            await ctx.reply("⛔ No tienes permisos para consultar Spools. Requiere nivel Supervisor o superior.");
+            return;
+        }
+        const query = userText.split(" ").slice(1).join(" ").trim();
+        if (!query) {
+            await ctx.reply("❌ Formato incorrecto.\n\nEjemplo de uso:\n`/spool SP05`", { parse_mode: "Markdown" });
+            return;
+        }
+        await ctx.reply(`🔍 Buscando spools que coincidan con: ${query}...`);
+        const spools = await (0, appsheet_js_1.getSpoolStatus)(query);
+        if (spools.length === 0) {
+            await ctx.reply(`🚫 No se encontraron spools para: ${query}.\nPrueba con un identificador más preciso.`);
+            return;
+        }
+        if (spools.length > 5) {
+            await ctx.reply(`⚠️ Se encontraron demasiados spools (${spools.length}). Por favor sé más específico con tu búsqueda.`);
+            return;
+        }
+        for (const s of spools) {
+            let msg = `🛠️ **Spool:** \`${s.ID_SPOOL}\`\n`;
+            msg += `> 📍 **Isométrico:** \`${s.ID_ISO || 'N/A'}\`\n\n`;
+            msg += `**Estado Fabricación:** ${s.ESTADO || 'NO DEFINIDO'}\n`;
+            msg += `**Total Juntas:** ${s.TOTAL_JUNTAS}\n\n`;
+            if (s.JUNTAS.length > 0) {
+                msg += `📋 **Uniones:**\n`;
+                for (const j of s.JUNTAS) {
+                    const suffix = j.ID_JUNTA.split('_').slice(-2).join('_');
+                    msg += `  · \`${suffix || j.ID_JUNTA}\` \u2192 ${j.ESTADO}\n`;
+                }
+            }
+            try {
+                await ctx.reply(msg, { parse_mode: "Markdown" });
+            }
+            catch (mdError) {
+                // Si el Markdown explota por culpa de caracteres raros (ej. comillas o guiones bajos extraños)
+                console.error("Markdown parse failed, falling back to plain text:", mdError);
+                await ctx.reply(msg.replace(/[`*]/g, ''));
+            }
+        }
+    }
+    catch (err) {
+        console.error("Error en handleSpool:", err);
+        await ctx.reply("❌ Ocurrió un error inesperado al procesar tu comando.");
+    }
+};
+exports.handleSpool = handleSpool;

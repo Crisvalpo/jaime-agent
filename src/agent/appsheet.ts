@@ -255,7 +255,20 @@ export const getJuntaStatus = async (searchQuery: string): Promise<JuntaStatus[]
 
         // 4. Cruzar la información
         return masterMatches.map((master: any) => {
-            const ejecucion = ejecuciones.find((e: any) => e.ID_JUNTA === master.ID_JUNTA);
+            const allEjecuciones = ejecuciones.filter((e: any) => e.ID_JUNTA === master.ID_JUNTA);
+
+            let ejecucion = null;
+            if (allEjecuciones.length > 0) {
+                const hierarchy = ['EJECUTADA', 'EMPLANTILLADO', 'CORTE DIMENSIONADO'];
+                ejecucion = allEjecuciones.sort((a: any, b: any) => {
+                    let rankA = hierarchy.indexOf(a.ESTADO_EJECUCION);
+                    let rankB = hierarchy.indexOf(b.ESTADO_EJECUCION);
+                    if (rankA === -1) rankA = 99;
+                    if (rankB === -1) rankB = 99;
+                    return rankA - rankB; // El menor rank queda primero
+                })[0];
+            }
+
             const vt = inspecciones.find((v: any) => v.ID_JUNTA === master.ID_JUNTA);
 
             return {
@@ -282,6 +295,64 @@ export const getJuntaStatus = async (searchQuery: string): Promise<JuntaStatus[]
 
     } catch (err) {
         console.error('[AppSheet] Error en getJuntaStatus:', err);
+        return [];
+    }
+};
+
+/**
+ * PHASE 2: Consulta de estado de Spool
+ */
+export interface SpoolStatus {
+    ID_SPOOL: string;
+    ID_ISO?: string;
+    ESTADO?: string;
+    TOTAL_JUNTAS: number;
+    JUNTAS: {
+        ID_JUNTA: string;
+        ESTADO: string;
+    }[];
+}
+
+export const getSpoolStatus = async (searchQuery: string): Promise<SpoolStatus[]> => {
+    try {
+        const upperQuery = searchQuery.trim().toUpperCase();
+
+        // 1. Consultar la tabla maestra `LIST_Spools_MS`
+        const listSpools = await fetchAppSheetTable("LIST_Spools_MS");
+        const masterMatches = listSpools.filter((s: any) => s.ID_SPOOL && s.ID_SPOOL.toUpperCase().includes(upperQuery));
+
+        if (masterMatches.length === 0) return [];
+
+        if (masterMatches.length > 5) {
+            return masterMatches.map((m: any) => ({
+                ID_SPOOL: m.ID_SPOOL,
+                ID_ISO: m.ID_ISO,
+                ESTADO: 'NO REVISADO',
+                TOTAL_JUNTAS: 0,
+                JUNTAS: []
+            }));
+        }
+
+        // 2. Extraer los spools y traer sus juntas hijas desde LIST_Juntas_MS
+        const listJuntas = await fetchAppSheetTable("LIST_Juntas_MS");
+
+        return masterMatches.map((master: any) => {
+            const childJuntas = listJuntas.filter((j: any) => j.ID_SPOOL === master.ID_SPOOL);
+
+            return {
+                ID_SPOOL: master.ID_SPOOL,
+                ID_ISO: master.ID_ISO,
+                ESTADO: master.ESTADO_FABRICACION || master.ESTADO || 'NO DEFINIDO', // Podría ser ESTADO_FABRICACION
+                TOTAL_JUNTAS: childJuntas.length,
+                JUNTAS: childJuntas.map((cj: any) => ({
+                    ID_JUNTA: cj.ID_JUNTA,
+                    ESTADO: cj.ESTADO || 'N/A' // Estado según la lista maestra
+                }))
+            };
+        });
+
+    } catch (err) {
+        console.error('[AppSheet] Error en getSpoolStatus:', err);
         return [];
     }
 };

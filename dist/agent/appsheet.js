@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getJuntaStatus = exports.getNotificationRecipients = exports.updateAppsheetTelegramId = exports.findAppsheetUser = exports.appsheetTools = void 0;
+exports.getSpoolStatus = exports.getJuntaStatus = exports.getNotificationRecipients = exports.updateAppsheetTelegramId = exports.findAppsheetUser = exports.appsheetTools = void 0;
 const config_js_1 = require("../config.js");
 // Eliminamos las definiciones de herramientas para el agente IA, ya que el bot ahora es puramente robótico.
 exports.appsheetTools = {};
@@ -217,7 +217,20 @@ const getJuntaStatus = async (searchQuery) => {
         ]);
         // 4. Cruzar la información
         return masterMatches.map((master) => {
-            const ejecucion = ejecuciones.find((e) => e.ID_JUNTA === master.ID_JUNTA);
+            const allEjecuciones = ejecuciones.filter((e) => e.ID_JUNTA === master.ID_JUNTA);
+            let ejecucion = null;
+            if (allEjecuciones.length > 0) {
+                const hierarchy = ['EJECUTADA', 'EMPLANTILLADO', 'CORTE DIMENSIONADO'];
+                ejecucion = allEjecuciones.sort((a, b) => {
+                    let rankA = hierarchy.indexOf(a.ESTADO_EJECUCION);
+                    let rankB = hierarchy.indexOf(b.ESTADO_EJECUCION);
+                    if (rankA === -1)
+                        rankA = 99;
+                    if (rankB === -1)
+                        rankB = 99;
+                    return rankA - rankB; // El menor rank queda primero
+                })[0];
+            }
             const vt = inspecciones.find((v) => v.ID_JUNTA === master.ID_JUNTA);
             return {
                 ID_JUNTA: master.ID_JUNTA,
@@ -245,3 +258,42 @@ const getJuntaStatus = async (searchQuery) => {
     }
 };
 exports.getJuntaStatus = getJuntaStatus;
+const getSpoolStatus = async (searchQuery) => {
+    try {
+        const upperQuery = searchQuery.trim().toUpperCase();
+        // 1. Consultar la tabla maestra `LIST_Spools_MS`
+        const listSpools = await fetchAppSheetTable("LIST_Spools_MS");
+        const masterMatches = listSpools.filter((s) => s.ID_SPOOL && s.ID_SPOOL.toUpperCase().includes(upperQuery));
+        if (masterMatches.length === 0)
+            return [];
+        if (masterMatches.length > 5) {
+            return masterMatches.map((m) => ({
+                ID_SPOOL: m.ID_SPOOL,
+                ID_ISO: m.ID_ISO,
+                ESTADO: 'NO REVISADO',
+                TOTAL_JUNTAS: 0,
+                JUNTAS: []
+            }));
+        }
+        // 2. Extraer los spools y traer sus juntas hijas desde LIST_Juntas_MS
+        const listJuntas = await fetchAppSheetTable("LIST_Juntas_MS");
+        return masterMatches.map((master) => {
+            const childJuntas = listJuntas.filter((j) => j.ID_SPOOL === master.ID_SPOOL);
+            return {
+                ID_SPOOL: master.ID_SPOOL,
+                ID_ISO: master.ID_ISO,
+                ESTADO: master.ESTADO_FABRICACION || master.ESTADO || 'NO DEFINIDO', // Podría ser ESTADO_FABRICACION
+                TOTAL_JUNTAS: childJuntas.length,
+                JUNTAS: childJuntas.map((cj) => ({
+                    ID_JUNTA: cj.ID_JUNTA,
+                    ESTADO: cj.ESTADO || 'N/A' // Estado según la lista maestra
+                }))
+            };
+        });
+    }
+    catch (err) {
+        console.error('[AppSheet] Error en getSpoolStatus:', err);
+        return [];
+    }
+};
+exports.getSpoolStatus = getSpoolStatus;
